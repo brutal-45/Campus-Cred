@@ -2,9 +2,10 @@
  * Render Build Script
  *
  * This script runs during Render's build phase to:
- * 1. Generate Prisma Client with PostgreSQL provider
- * 2. Push schema to PostgreSQL database (creates tables)
- * 3. Build Next.js
+ * 1. Ensure Prisma v6 is installed (NOT v7 which has breaking changes)
+ * 2. Generate Prisma Client with PostgreSQL provider
+ * 3. Push schema to PostgreSQL database (creates tables)
+ * 4. Build Next.js
  *
  * Required Render Environment Variables:
  * - DATABASE_URL: PostgreSQL connection string
@@ -20,7 +21,17 @@ const { execSync } = require('child_process');
 
 console.log('🚀 Running Render build setup...');
 
-// Step 1: Generate Prisma Client
+// Step 1: Force install Prisma v6 (NOT v7 which breaks schema)
+try {
+  console.log('📦 Ensuring Prisma v6 is installed (pinning to avoid v7 breaking changes)...');
+  execSync('npm install prisma@6 @prisma/client@6 --save', { stdio: 'inherit' });
+  console.log('✅ Prisma v6 confirmed');
+} catch (error) {
+  console.error('⚠️ Prisma v6 install warning:', error.message);
+  // Continue — it might already be installed
+}
+
+// Step 2: Generate Prisma Client
 try {
   console.log('📦 Generating Prisma Client...');
   execSync('npx prisma generate', { stdio: 'inherit' });
@@ -30,7 +41,7 @@ try {
   process.exit(1);
 }
 
-// Step 2: Push schema to PostgreSQL (creates tables if they don't exist)
+// Step 3: Push schema to PostgreSQL (creates tables if they don't exist)
 if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgresql')) {
   try {
     console.log('🗄️ Pushing schema to PostgreSQL...');
@@ -44,7 +55,7 @@ if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgresql'
   console.log('⚠️ No PostgreSQL DATABASE_URL found. Set it in Render Environment Variables.');
 }
 
-// Step 3: Build Next.js
+// Step 4: Build Next.js
 try {
   console.log('🏗️ Building Next.js...');
   execSync('npx next build', { stdio: 'inherit' });
