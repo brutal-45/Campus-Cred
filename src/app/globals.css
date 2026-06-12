@@ -1,0 +1,454 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-poppins);
+  --font-certificate: var(--font-playfair);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* ── CampusCred Brand Colours ── */
+  --color-navy: #0A0F2C;
+  --color-navy-light: #141938;
+  --color-navy-lighter: #1E2550;
+  --color-electric: #3B82F6;
+  --color-electric-light: #60A5FA;
+  --color-electric-dark: #2563EB;
+  --color-purple: #7C3AED;
+  --color-purple-light: #A78BFA;
+  --color-purple-dark: #6D28D9;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-gold: #D4AF37;
+  --color-gold-light: #E8C84A;
+
+  /* ── Section Backgrounds (only these two) ── */
+  --color-section-white: #FFFFFF;
+  --color-section-gray: #F8FAFC;
+
+  /* ── Text Colours ── */
+  --color-text-primary: #0A0F2C;
+  --color-text-secondary: #64748B;
+  --color-text-disabled: #94A3B8;
+
+  /* ── Card Colours ── */
+  --color-card-border: #E2E8F0;
+  --color-card-shadow: rgba(0, 0, 0, 0.08);
+  --color-card-shadow-hover: rgba(0, 0, 0, 0.12);
+
+  /* ── Input Colours ── */
+  --color-input-border: #CBD5E1;
+  --color-input-focus: #3B82F6;
+  --color-input-success: #10B981;
+  --color-input-error: #EF4444;
+
+  /* ── Sidebar ── */
+  --color-sidebar-active: rgba(59, 130, 246, 0.15);
+  --color-sidebar-hover: rgba(255, 255, 255, 0.05);
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: #F8FAFC;
+  --foreground: #0A0F2C;
+  --card: #FFFFFF;
+  --card-foreground: #0A0F2C;
+  --popover: #FFFFFF;
+  --popover-foreground: #0A0F2C;
+  --primary: #3B82F6;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F1F5F9;
+  --secondary-foreground: #0A0F2C;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+  --accent: #7C3AED;
+  --accent-foreground: #FFFFFF;
+  --destructive: #EF4444;
+  --border: #E2E8F0;
+  --input: #E2E8F0;
+  --ring: #3B82F6;
+  --chart-1: #3B82F6;
+  --chart-2: #7C3AED;
+  --chart-3: #10B981;
+  --chart-4: #F59E0B;
+  --chart-5: #EF4444;
+  --sidebar: #0A0F2C;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #3B82F6;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #1E2550;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #1E2550;
+  --sidebar-ring: #3B82F6;
+}
+
+.dark {
+  --background: #0A0F2C;
+  --foreground: #F1F5F9;
+  --card: #141938;
+  --card-foreground: #F1F5F9;
+  --popover: #141938;
+  --popover-foreground: #F1F5F9;
+  --primary: #3B82F6;
+  --primary-foreground: #FFFFFF;
+  --secondary: #1E2550;
+  --secondary-foreground: #F1F5F9;
+  --muted: #1E2550;
+  --muted-foreground: #94A3B8;
+  --accent: #7C3AED;
+  --accent-foreground: #FFFFFF;
+  --destructive: #EF4444;
+  --border: #1E2550;
+  --input: #1E2550;
+  --ring: #3B82F6;
+  --chart-1: #60A5FA;
+  --chart-2: #A78BFA;
+  --chart-3: #34D399;
+  --chart-4: #FBBF24;
+  --chart-5: #F87171;
+  --sidebar: #060918;
+  --sidebar-foreground: #F1F5F9;
+  --sidebar-primary: #3B82F6;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #0E1230;
+  --sidebar-accent-foreground: #F1F5F9;
+  --sidebar-border: #1E2550;
+  --sidebar-ring: #3B82F6;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ── CampusCred Design System Utilities ── */
+@layer utilities {
+  /*
+   * BUTTON STYLES
+   * Only 3 button styles allowed across the entire site.
+   * The ONE exception is the landing-page hero CTA which may use a gradient.
+   */
+  .btn-primary {
+    @apply bg-navy text-white rounded-lg px-6 py-3 font-semibold;
+    transition: background-color 200ms ease, transform 100ms ease;
+  }
+  .btn-primary:hover {
+    background-color: #090e26; /* navy darkened 10% */
+  }
+  .btn-primary:active {
+    transform: scale(0.97);
+  }
+  .dark .btn-primary {
+    background-color: #3B82F6;
+    color: #FFFFFF;
+  }
+  .dark .btn-primary:hover {
+    background-color: #2563EB;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-navy border border-navy rounded-lg px-6 py-3 font-semibold;
+    transition: background-color 200ms ease, transform 100ms ease;
+  }
+  .btn-secondary:hover {
+    background-color: #F8FAFC;
+  }
+  .btn-secondary:active {
+    transform: scale(0.97);
+  }
+  .dark .btn-secondary {
+    background-color: #1E2550;
+    color: #F1F5F9;
+    border-color: #1E2550;
+  }
+  .dark .btn-secondary:hover {
+    background-color: #2A3268;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-navy border-0 rounded-lg px-6 py-3 font-semibold;
+    transition: color 200ms ease;
+  }
+  .btn-ghost:hover {
+    text-decoration: underline;
+  }
+  .dark .btn-ghost {
+    color: #F1F5F9;
+  }
+
+  /*
+   * CARD STYLE
+   * White bg, 1px border, 12px radius, subtle shadow.
+   * Hover: translateY -2px, stronger shadow, 200ms.
+   * NO glassmorphism. NO gradient cards. NO heavy shadows.
+   * Dark mode: navy-light bg, darker border.
+   */
+  .cc-card {
+    @apply bg-white border rounded-xl p-6;
+    border-color: var(--color-card-border);
+    box-shadow: 0 1px 3px var(--color-card-shadow);
+    transition: transform 200ms ease, box-shadow 200ms ease;
+  }
+  .cc-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--color-card-shadow-hover);
+  }
+  .dark .cc-card {
+    background-color: #141938;
+    border-color: #1E2550;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+  .dark .cc-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  /*
+   * SECTION BACKGROUNDS
+   * Only two allowed: white and light gray.
+   * Coloured section backgrounds are FORBIDDEN except for the hero.
+   * Dark mode: deep navy variants.
+   */
+  .section-white {
+    background-color: #FFFFFF;
+  }
+  .section-gray {
+    background-color: #F8FAFC;
+  }
+  .dark .section-white {
+    background-color: #0A0F2C;
+  }
+  .dark .section-gray {
+    background-color: #0E1230;
+  }
+
+  /*
+   * HERO BACKGROUND
+   * Navy with static dot grid at 8% opacity. NOT moving.
+   */
+  .hero-bg {
+    background-color: #0A0F2C;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+
+  /*
+   * GRADIENT – Only for hero CTA button and certificate-related elements.
+   * NOT for general buttons, cards, or section backgrounds.
+   */
+  .gradient-primary {
+    background: linear-gradient(135deg, #3B82F6 0%, #7C3AED 100%);
+  }
+  .gradient-gold {
+    background: linear-gradient(135deg, #D4AF37 0%, #E8C84A 100%);
+  }
+  .gradient-text {
+    background: linear-gradient(135deg, #3B82F6 0%, #7C3AED 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .gradient-text-gold {
+    background: linear-gradient(135deg, #D4AF37 0%, #E8C84A 50%, #D4AF37 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Navy backgrounds (for hero, footer, etc.) */
+  .navy-bg {
+    background-color: #0A0F2C;
+  }
+
+  /*
+   * FEATURE ICON BACKGROUND
+   * Light navy at 8% — NOT colourful backgrounds.
+   */
+  .feature-icon-bg {
+    background-color: rgba(10, 15, 44, 0.08);
+  }
+  .dark .feature-icon-bg {
+    background-color: rgba(59, 130, 246, 0.12);
+  }
+
+  /*
+   * LOADING SKELETON
+   * Shimmer effect only — NO spinning loaders for content.
+   */
+  .skeleton-shimmer {
+    background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+  .dark .skeleton-shimmer {
+    background: linear-gradient(90deg, #141938 25%, #1E2550 50%, #141938 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  /*
+   * SIDEBAR STYLE
+   * 240px width, navy background, white text.
+   * Active item: electric blue bg at 15% + 3px left border.
+   * Hover: white at 5% bg.
+   */
+  .sidebar-active {
+    background-color: var(--color-sidebar-active);
+    border-left: 3px solid var(--color-electric);
+  }
+  .sidebar-hover:hover {
+    background-color: var(--color-sidebar-hover);
+  }
+
+  /*
+   * ALLOWED ANIMATIONS (minimal & purposeful)
+   */
+  .animate-fade-in {
+    opacity: 0;
+    animation: fadeIn 300ms ease forwards;
+  }
+  .animate-fade-in-up {
+    animation: fadeInUp 300ms ease forwards;
+  }
+  .animate-modal-in {
+    animation: modalIn 200ms ease forwards;
+  }
+  .animate-toast-in {
+    animation: toastIn 300ms ease forwards;
+  }
+  .card-hover {
+    transition: transform 200ms ease, box-shadow 200ms ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+  .btn-press {
+    transition: transform 150ms ease;
+  }
+  .btn-press:active {
+    transform: scale(0.97);
+  }
+
+  /*
+   * NAVBAR SCROLL SHADOW
+   * Applied after scrolling past 80px.
+   */
+  .navbar-scrolled {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+  .dark .navbar-scrolled {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* ── Allowed Keyframes ── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── FORBIDDEN: These animations are REMOVED ──
+   animate-float, animate-float-delayed, animate-pulse-glow,
+   animate-slide-up (replaced by fadeIn), auto-playing carousels,
+   parallax, bounce, continuous rotation
+*/
+
+/* Custom Scrollbar (minimal) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Certificate Styles (kept – these are for printed certificates only) */
+.certificate-border {
+  border: 4px solid #D4AF37;
+  box-shadow: inset 0 0 0 8px #0A0F2C, inset 0 0 0 10px #3B82F6, 0 0 40px rgba(212, 175, 55, 0.15);
+}
+
+/* Logo shield draw animation – used only for loading spinner page */
+.shield-draw {
+  stroke-dasharray: 400;
+  stroke-dashoffset: 400;
+  animation: drawShield 600ms ease-out forwards;
+}
+@keyframes drawShield {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Pop check – used only for loading spinner page */
+@keyframes popCheck {
+  0% { transform: scale(0); opacity: 0; }
+  70% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
