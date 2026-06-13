@@ -4,16 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
-    "build": "prisma generate && next build",
+    "build": "npx prisma@6 generate && next build",
     "render-build": "node render-build.js",
     "vercel-build": "node vercel-build.js",
     "start": "next start -p $PORT",
     "lint": "eslint .",
-    "db:push": "prisma db push",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:reset": "prisma migrate reset",
-    "postinstall": "prisma generate"
+    "db:push": "npx prisma@6 db push",
+    "db:generate": "npx prisma@6 generate",
+    "db:migrate": "npx prisma@6 migrate dev",
+    "db:reset": "npx prisma@6 migrate reset",
+    "postinstall": "npx prisma@6 generate"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
