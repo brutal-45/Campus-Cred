@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   XCircle,
   ArrowRight,
+  Phone,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { PLATFORM_NAME } from '@/lib/constants';
@@ -34,6 +35,7 @@ export function StepRegister({ onNext }: StepRegisterProps) {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
   });
@@ -90,6 +92,22 @@ export function StepRegister({ onNext }: StepRegisterProps) {
     }, 500);
   }, [errors.email]);
 
+  // ─── Phone: auto-format +91 XXXXX XXXXX ───
+  const formatPhone = useCallback((value: string): string => {
+    const digits = value.replace(/\D/g, '');
+    const cleaned = digits.replace(/^91/, '');
+    if (cleaned.length === 0) return '';
+    if (cleaned.length <= 5) return `+91 ${cleaned}`;
+    return `+91 ${cleaned.slice(0, 5)} ${cleaned.slice(5, 10)}`;
+  }, []);
+
+  const handlePhoneChange = useCallback((value: string) => {
+    const digits = value.replace(/\D/g, '').replace(/^91/, '').slice(0, 10);
+    const formatted = formatPhone(digits);
+    setFormData((prev) => ({ ...prev, phone: formatted }));
+    if (errors.phone) setErrors((prev) => { const n = { ...prev }; delete n.phone; return n; });
+  }, [errors.phone, formatPhone]);
+
   // ─── Photo select handler ───
   const handlePhotoSelect = useCallback((file: File | null, previewUrl: string | null) => {
     setPhotoFile(file);
@@ -119,6 +137,14 @@ export function StepRegister({ onNext }: StepRegisterProps) {
       newErrors.email = 'This email is already registered';
     } else if (emailStatus === 'checking') {
       newErrors.email = 'Checking email availability...';
+    }
+
+    // Phone is optional, but if entered it must be valid
+    if (formData.phone.trim()) {
+      const phoneDigits = formData.phone.replace(/\D/g, '').replace(/^91/, '');
+      if (phoneDigits.length !== 10 || !/^[6-9]\d{9}$/.test(phoneDigits)) {
+        newErrors.phone = 'Enter a valid 10-digit Indian phone number';
+      }
     }
 
     if (!formData.password) {
@@ -165,12 +191,15 @@ export function StepRegister({ onNext }: StepRegisterProps) {
         }
       }
 
+      const phoneDigits = formData.phone.replace(/\D/g, '').replace(/^91/, '');
+
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fullName: formData.fullName.trim(),
           email: formData.email.trim().toLowerCase(),
+          phone: phoneDigits || undefined,
           password: formData.password,
           profilePhoto: photoUrl,
         }),
@@ -321,10 +350,34 @@ export function StepRegister({ onNext }: StepRegisterProps) {
           )}
         </div>
 
-        {/* ─── Password ─── */}
+        {/* ─── Phone Number (optional, no OTP verification) ─── */}
         <div
           className="animate-fade-in-up space-y-2"
           style={{ animationDelay: '200ms' }}
+        >
+          <Label htmlFor="phone" className="text-blue-100 text-sm font-medium">
+            Phone Number <span className="text-blue-300/40 text-xs">(optional)</span>
+          </Label>
+          <div className="relative">
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-300/50" />
+            <Input
+              id="phone"
+              type="tel"
+              placeholder="+91 XXXXX XXXXX"
+              value={formData.phone}
+              onChange={(e) => handlePhoneChange(e.target.value)}
+              className={inputClass('phone')}
+            />
+          </div>
+          {errors.phone && (
+            <p className="text-red-400 text-xs mt-1">{errors.phone}</p>
+          )}
+        </div>
+
+        {/* ─── Password ─── */}
+        <div
+          className="animate-fade-in-up space-y-2"
+          style={{ animationDelay: '250ms' }}
         >
           <Label htmlFor="password" className="text-blue-100 text-sm font-medium">
             Password <span className="text-red-400">*</span>
@@ -358,7 +411,7 @@ export function StepRegister({ onNext }: StepRegisterProps) {
         {/* ─── Confirm Password ─── */}
         <div
           className="animate-fade-in-up space-y-2"
-          style={{ animationDelay: '250ms' }}
+          style={{ animationDelay: '300ms' }}
         >
           <Label htmlFor="confirmPassword" className="text-blue-100 text-sm font-medium">
             Confirm Password <span className="text-red-400">*</span>
@@ -411,7 +464,7 @@ export function StepRegister({ onNext }: StepRegisterProps) {
         {/* ─── Profile Photo Upload ─── */}
         <div
           className="animate-fade-in-up"
-          style={{ animationDelay: '300ms' }}
+          style={{ animationDelay: '350ms' }}
         >
           <ProfilePhotoUpload
             onPhotoSelect={handlePhotoSelect}
@@ -422,7 +475,7 @@ export function StepRegister({ onNext }: StepRegisterProps) {
         {/* ─── Submit Button ─── */}
         <div
           className="animate-fade-in-up pt-2"
-          style={{ animationDelay: '350ms' }}
+          style={{ animationDelay: '400ms' }}
         >
           <Button
             type="submit"
@@ -447,7 +500,7 @@ export function StepRegister({ onNext }: StepRegisterProps) {
         {/* Login Link */}
         <p
           className="animate-fade-in text-center text-sm text-text-secondary"
-          style={{ animationDelay: '400ms' }}
+          style={{ animationDelay: '450ms' }}
         >
           Already have an account?{' '}
           <button

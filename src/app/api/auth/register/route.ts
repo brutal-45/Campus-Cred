@@ -9,6 +9,7 @@ export async function POST(req: NextRequest) {
       fullName,
       email,
       password,
+      phone,
       profilePhoto,
       role,
       companyName,
@@ -92,6 +93,7 @@ export async function POST(req: NextRequest) {
       data: {
         fullName,
         email: email.toLowerCase(),
+        phone: phone || null,
         profilePhoto: profilePhoto || null,
         passwordHash,
         role: userRole,
