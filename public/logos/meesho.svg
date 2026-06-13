@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" width="160" height="50">
+  <!-- Meesho Logo - Pink/Magenta with shopping icon -->
+  <defs>
+    <style>
+      .meesho-text { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-size: 18px; fill: #E94560; }
+    </style>
+  </defs>
+  <!-- Shopping bag icon -->
+  <rect x="5" y="12" width="22" height="22" rx="4" fill="#E94560"/>
+  <!-- Bag handle cutout -->
+  <path d="M10,18 C10,12 22,12 22,18" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- Heart inside bag -->
+  <path d="M13,23 C13,21 16,20 16,22.5 C16,20 19,21 19,23 C19,26 16,28 16,28 C16,28 13,26 13,23 Z" fill="#fff" opacity="0.9"/>
+  <!-- Meesho text -->
+  <text x="32" y="28" class="meesho-text">Meesho</text>
+</svg>

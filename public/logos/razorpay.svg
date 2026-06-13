@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" width="160" height="50">
+  <!-- Razorpay Logo -->
+  <defs>
+    <style>
+      .razor-text { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-weight: 600; font-size: 17px; fill: #2D69FF; }
+    </style>
+  </defs>
+  <!-- Geometric R mark - two triangles forming a stylized R -->
+  <polygon points="5,8 22,8 12,26" fill="#2D69FF"/>
+  <polygon points="12,26 22,8 22,20 15,32" fill="#1A4FCC" opacity="0.7"/>
+  <!-- Small accent line -->
+  <rect x="8" y="30" width="10" height="2" rx="1" fill="#2D69FF"/>
+  <!-- Razorpay text -->
+  <text x="28" y="27" class="razor-text">razorpay</text>
+</svg>

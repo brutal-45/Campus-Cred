@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" width="160" height="50">
+  <!-- Freshworks Logo - Orange/Red with geometric accent -->
+  <defs>
+    <style>
+      .fw-text { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-weight: 600; font-size: 16px; fill: #FF6B35; }
+    </style>
+  </defs>
+  <!-- Geometric freshworks icon - overlapping shapes -->
+  <rect x="5" y="9" width="14" height="14" rx="3" fill="#FF6B35" transform="rotate(-10 12 16)"/>
+  <rect x="11" y="15" width="14" height="14" rx="3" fill="#FF8F5E" transform="rotate(5 18 22)" opacity="0.8"/>
+  <!-- Small white F -->
+  <text x="9" y="23" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="13" fill="#fff">F</text>
+  <!-- freshworks text -->
+  <text x="30" y="28" class="fw-text">freshworks</text>
+</svg>

@@ -15,8 +15,8 @@ interface CityState {
 }
 
 interface StepPersonalInfoProps {
-  data: { college: string; city: string; phone: string; state?: string };
-  onUpdate: (data: { college: string; city: string; phone: string; state?: string }) => void;
+  data: { college: string; city: string; state?: string };
+  onUpdate: (data: { college: string; city: string; state?: string }) => void;
   onNext: () => void;
   onPrev: () => void;
 }
@@ -46,7 +46,6 @@ export function StepPersonalInfo({
     college: data.college || '',
     city: data.city || '',
     state: data.state || '',
-    phone: data.phone || '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" width="160" height="50">
+  <!-- Swiggy Logo -->
+  <defs>
+    <style>
+      .swiggy-text { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-size: 19px; fill: #FC8019; }
+    </style>
+  </defs>
+  <!-- Swiggy location pin / S-curve icon -->
+  <path d="M15,6 C8,6 4,11 4,17 C4,25 15,36 15,36 C15,36 26,25 26,17 C26,11 22,6 15,6 Z" fill="#FC8019"/>
+  <path d="M10,14 C10,11 12,9 15,9 C18,9 20,11 20,14 C20,17 15,19 15,22" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <circle cx="15" cy="25" r="2" fill="#fff"/>
+  <!-- swiggy text -->
+  <text x="33" y="27" class="swiggy-text">swiggy</text>
+</svg>

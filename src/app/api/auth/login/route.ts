@@ -35,38 +35,25 @@ function parseDeviceInfo(userAgent: string | null): { deviceName: string; device
   };
 }
 
-function isEmail(input: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
-}
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email, phone, password, rememberMe } = body;
+    const { email, password, rememberMe } = body;
 
-    // Support email OR phone for login
-    const loginInput = email || phone;
-    if (!loginInput || !password) {
+    if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email/phone and password are required' },
+        { error: 'Email and password are required' },
         { status: 400 }
       );
     }
 
-    // Determine if input is email or phone
-    const loginIsEmail = isEmail(loginInput);
-
-    // Find user by email or phone
-    let user = loginIsEmail
-      ? await db.user.findUnique({
-          where: { email: loginInput.toLowerCase() },
-        })
-      : await db.user.findFirst({
-          where: { phone: loginInput },
-        });
+    // Find user by email
+    let user = await db.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
 
     // ─── Admin Auto-Create: If admin email doesn't exist, create it ───
-    if (!user && loginIsEmail && loginInput.toLowerCase() === ADMIN_EMAIL) {
+    if (!user && email.toLowerCase() === ADMIN_EMAIL) {
       if (password === ADMIN_PASSWORD) {
         const passwordHash = await hashPassword(ADMIN_PASSWORD);
         user = await db.user.create({
@@ -83,7 +70,7 @@ export async function POST(req: NextRequest) {
         });
       } else {
         return NextResponse.json(
-          { error: 'Invalid email/phone or password' },
+          { error: 'Invalid email or password' },
           { status: 401 }
         );
       }
@@ -91,7 +78,7 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Invalid email/phone or password' },
+        { error: 'Invalid email or password' },
         { status: 401 }
       );
     }
@@ -109,7 +96,7 @@ export async function POST(req: NextRequest) {
       // For admin, verify against the configured password
       if (password !== ADMIN_PASSWORD) {
         return NextResponse.json(
-          { error: 'Invalid email/phone or password' },
+          { error: 'Invalid email or password' },
           { status: 401 }
         );
       }
@@ -132,7 +119,7 @@ export async function POST(req: NextRequest) {
         });
 
         return NextResponse.json(
-          { error: 'Invalid email/phone or password' },
+          { error: 'Invalid email or password' },
           { status: 401 }
         );
       }

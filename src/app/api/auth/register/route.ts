@@ -9,9 +9,7 @@ export async function POST(req: NextRequest) {
       fullName,
       email,
       password,
-      phone,
       profilePhoto,
-      phoneVerified,
       role,
       companyName,
       industry,
@@ -86,19 +84,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if phone already registered (if provided)
-    if (phone && userRole === 'student') {
-      const existingPhone = await db.user.findFirst({
-        where: { phone },
-      });
-      if (existingPhone) {
-        return NextResponse.json(
-          { error: 'An account with this phone number already exists' },
-          { status: 409 }
-        );
-      }
-    }
-
     // Hash password
     const passwordHash = await hashPassword(password);
 
@@ -107,7 +92,6 @@ export async function POST(req: NextRequest) {
       data: {
         fullName,
         email: email.toLowerCase(),
-        phone: phone || null,
         profilePhoto: profilePhoto || null,
         passwordHash,
         role: userRole,
@@ -115,7 +99,7 @@ export async function POST(req: NextRequest) {
         points: userRole === 'student' ? 0 : undefined,
         campusCredScore: userRole === 'student' ? 0 : undefined,
         streakDays: userRole === 'student' ? 0 : undefined,
-        isVerified: phoneVerified || false,
+        isVerified: false,
       },
     });
 

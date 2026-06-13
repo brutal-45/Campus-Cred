@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" width="160" height="50">
+  <!-- PhonePe Logo - Purple with wallet icon -->
+  <defs>
+    <style>
+      .ppe-text { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-size: 17px; fill: #5F259F; }
+    </style>
+  </defs>
+  <!-- Purple circle background -->
+  <circle cx="16" cy="22" r="14" fill="#5F259F"/>
+  <!-- Wallet icon inside circle -->
+  <rect x="8" y="16" width="16" height="12" rx="2" fill="#fff"/>
+  <rect x="19" y="19" width="5" height="6" rx="1" fill="#E0C6F0"/>
+  <circle cx="21" cy="22" r="1.2" fill="#5F259F"/>
+  <!-- Card flap -->
+  <path d="M10,16 L10,14 C10,12 12,11 14,12 L20,15" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.6"/>
+  <!-- PhonePe text -->
+  <text x="35" y="28" class="ppe-text">PhonePe</text>
+</svg>

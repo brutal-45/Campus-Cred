@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" width="160" height="50">
+  <!-- UpGrad Logo - Red with upward arrow -->
+  <defs>
+    <style>
+      .ug-text { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-size: 18px; fill: #C82127; }
+      .ug-grad { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-weight: 400; font-size: 18px; fill: #C82127; }
+    </style>
+  </defs>
+  <!-- Upward arrow icon -->
+  <polygon points="16,6 26,18 20,18 20,34 12,34 12,18 6,18" fill="#C82127"/>
+  <!-- Arrow highlight -->
+  <polygon points="16,10 22,18 20,18 20,34 16,34" fill="#E03535" opacity="0.5"/>
+  <!-- upGrad text -->
+  <text x="30" y="28" class="ug-text">up</text>
+  <text x="51" y="28" class="ug-grad">Grad</text>
+</svg>

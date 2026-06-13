@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Mail,
-  Phone,
   Lock,
   Eye,
   EyeOff,
@@ -62,46 +61,28 @@ function LinkedInIcon({ className }: { className?: string }) {
   );
 }
 
-// Detect if input is email or phone
-function detectInputType(value: string): 'email' | 'phone' {
-  const phoneRegex = /^[+]?[\d\s\-()]{7,}$/;
-  if (phoneRegex.test(value.replace(/\s/g, '')) && /\d/.test(value)) {
-    return 'phone';
-  }
-  return 'email';
-}
-
 export function LoginPage() {
   const { setUser, setToken, setRefreshToken, setOauthUser, setOauthOnboarding, navigate } = useAppStore();
-  const [identifier, setIdentifier] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
 
-  const inputType = detectInputType(identifier);
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!identifier || !password) {
+    if (!email || !password) {
       toast.error('Please fill in all fields');
       return;
     }
 
     setIsLoading(true);
     try {
-      const payload: Record<string, string | boolean> = { password, rememberMe };
-      if (inputType === 'phone') {
-        payload.phone = identifier;
-      } else {
-        payload.email = identifier;
-      }
-
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ email, password, rememberMe }),
       });
 
       const data = await res.json();
@@ -261,24 +242,20 @@ export function LoginPage() {
 
             {/* Form */}
             <form onSubmit={handleLogin} className="space-y-4">
-              {/* Email or Phone Input */}
+              {/* Email Input */}
               <div className="space-y-1.5">
                 <label className="text-[13px] font-medium text-navy dark:text-white/80">
-                  Email or Phone
+                  Email Address
                 </label>
                 <div className="relative">
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8] dark:text-white/40 pointer-events-none">
-                    {inputType === 'phone' ? (
-                      <Phone className="w-4 h-4" />
-                    ) : (
-                      <Mail className="w-4 h-4" />
-                    )}
+                    <Mail className="w-4 h-4" />
                   </div>
                   <Input
-                    type={inputType === 'phone' ? 'tel' : 'email'}
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="Enter your email or phone number"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email address"
                     className="pl-10 h-11 rounded-lg border-[#CBD5E1] dark:border-navy-lighter bg-white dark:bg-navy-lighter text-navy dark:text-white placeholder:text-[#94A3B8] dark:placeholder:text-white/30 focus-visible:border-[#3B82F6] focus-visible:ring-[#3B82F6]/20 focus-visible:ring-[2px] transition-colors"
                   />
                 </div>

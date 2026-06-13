@@ -80,7 +80,6 @@ export default function CollegeRegisterPage() {
  email: form.email.trim().toLowerCase(),
  password: form.password,
  role: 'college',
- phone: '',
  collegeName: form.collegeName.trim(),
  address: form.address.trim() || undefined,
  state: form.state.trim() || undefined,

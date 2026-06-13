@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" width="160" height="50">
+  <!-- Groww Logo - Purple with growth arrow -->
+  <defs>
+    <style>
+      .grow-text { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-size: 19px; fill: #5B45D0; }
+    </style>
+  </defs>
+  <!-- Growth arrow icon -->
+  <path d="M6,32 L12,24 L18,28 L26,14" stroke="#5B45D0" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Arrow head -->
+  <polygon points="26,10 30,16 22,16" fill="#5B45D0"/>
+  <!-- Small base line -->
+  <line x1="4" y1="34" x2="30" y2="34" stroke="#5B45D0" stroke-width="2" stroke-linecap="round"/>
+  <!-- groww text -->
+  <text x="34" y="28" class="grow-text">groww</text>
+</svg>

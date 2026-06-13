@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" width="160" height="50">
+  <!-- Flipkart Logo - Blue + Yellow shopping bag -->
+  <defs>
+    <style>
+      .fk-text { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-size: 17px; fill: #2874F0; }
+      .fk-plus { font-family: Arial, sans-serif; font-weight: 700; font-size: 9px; fill: #FFDD00; }
+    </style>
+  </defs>
+  <!-- Shopping bag icon -->
+  <rect x="5" y="10" width="24" height="26" rx="3" fill="#2874F0"/>
+  <!-- Bag handle -->
+  <path d="M10,14 C10,8 17,4 24,14" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Yellow plus accent -->
+  <circle cx="17" cy="26" r="5" fill="#FFDD00"/>
+  <text x="14.5" y="29.5" class="fk-plus" fill="#2874F0">+</text>
+  <!-- Flipkart text -->
+  <text x="35" y="27" class="fk-text">Flipkart</text>
+  <!-- Plus text -->
+  <text x="103" y="27" font-family="Arial, sans-serif" font-weight="400" font-size="10" fill="#FFDD00" stroke="#FFDD00" stroke-width="0.3">plus</text>
+</svg>

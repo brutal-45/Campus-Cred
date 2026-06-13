@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" width="160" height="50">
+  <!-- Zerodha Logo - Blue with clean font -->
+  <defs>
+    <style>
+      .zer-text { font-family: 'Georgia', 'Times New Roman', serif; font-weight: 400; font-size: 19px; fill: #387ED1; letter-spacing: 0.5px; }
+    </style>
+  </defs>
+  <!-- Zerodha Z icon - stylized -->
+  <polygon points="6,10 24,10 24,14 10,14 24,30 24,34 6,34 6,30 20,30 6,14" fill="#387ED1" opacity="0.15"/>
+  <path d="M6,10 L24,10 L24,14 L12,14 L24,30 L24,34 L6,34 L6,30 L18,30 L6,14 Z" fill="#387ED1"/>
+  <!-- zerodha text -->
+  <text x="30" y="28" class="zer-text">zerodha</text>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" width="160" height="50">
+  <!-- Unacademy Logo - Green with U hexagon icon -->
+  <defs>
+    <style>
+      .una-text { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-size: 17px; fill: #00BFA6; }
+    </style>
+  </defs>
+  <!-- Hexagon icon -->
+  <polygon points="16,5 28,12 28,28 16,35 4,28 4,12" fill="#00BFA6"/>
+  <!-- White U inside hexagon -->
+  <path d="M10,14 L10,23 C10,27 12,29 16,29 C20,29 22,27 22,23 L22,14" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Unacademy text -->
+  <text x="33" y="28" class="una-text">Unacademy</text>
+</svg>

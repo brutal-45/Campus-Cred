@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" width="160" height="50">
+  <!-- Zomato Logo -->
+  <defs>
+    <style>
+      .zomato-text { font-family: 'Georgia', 'Times New Roman', serif; font-weight: 700; font-size: 21px; fill: #E23744; }
+    </style>
+  </defs>
+  <!-- Red tomato/heart shaped icon -->
+  <ellipse cx="15" cy="20" rx="9" ry="8.5" fill="#E23744"/>
+  <ellipse cx="15" cy="18" rx="6" ry="5" fill="#F0505C" opacity="0.4"/>
+  <!-- Stem -->
+  <rect x="13.5" y="9" width="3" height="5" rx="1.5" fill="#4CAF50"/>
+  <!-- Leaf -->
+  <ellipse cx="18" cy="11" rx="3" ry="1.5" fill="#4CAF50" transform="rotate(-30 18 11)"/>
+  <!-- zomato text -->
+  <text x="29" y="28" class="zomato-text">zomato</text>
+</svg>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" width="160" height="50">
+  <!-- Infosys Logo -->
+  <defs>
+    <style>
+      .info-text { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-weight: 300; font-size: 20px; fill: #007CC3; }
+    </style>
+  </defs>
+  <!-- Blue dot/circle accent -->
+  <circle cx="12" cy="22" r="8" fill="#007CC3"/>
+  <!-- Small white inner dot -->
+  <circle cx="14" cy="20" r="2.5" fill="#fff" opacity="0.4"/>
+  <!-- Infosys text -->
+  <text x="26" y="28" class="info-text">Infosys</text>
+  <!-- Tagline -->
+  <text x="26" y="39" font-family="Arial, sans-serif" font-size="6" fill="#66AADD" letter-spacing="2">NAVIGATE YOUR NEXT</text>
+</svg>

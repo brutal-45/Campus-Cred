@@ -40,7 +40,6 @@ export default function CompanyRegisterPage() {
  companyName: '',
  industry: '',
  website: '',
- phone: '',
  employeeCount: '',
  foundedYear: '',
  description: '',
@@ -84,7 +83,6 @@ export default function CompanyRegisterPage() {
  email: form.email.trim().toLowerCase(),
  password: form.password,
  role: 'company',
- phone: form.phone || undefined,
  companyName: form.companyName.trim(),
  industry: form.industry || undefined,
  website: form.website || undefined,
@@ -197,8 +195,7 @@ export default function CompanyRegisterPage() {
  </div>
  </div>
 
- {/* Email & Phone */}
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ {/* Email */}
  <div className="space-y-2">
  <Label className="text-sm font-medium">Email <span className="text-red-500">*</span></Label>
  <div className="relative">
@@ -212,15 +209,6 @@ export default function CompanyRegisterPage() {
  />
  </div>
  {errors.email && <p className="text-red-500 text-xs">{errors.email}</p>}
- </div>
- <div className="space-y-2">
- <Label className="text-sm font-medium">Phone</Label>
- <Input
- value={form.phone}
- onChange={(e) => updateField('phone', e.target.value)}
- placeholder="+91 98765 43210"
- />
- </div>
  </div>
 
  {/* Password */}

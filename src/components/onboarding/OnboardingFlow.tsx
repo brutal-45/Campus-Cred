@@ -12,7 +12,6 @@ import { StepSelectDegree } from './StepSelectDegree';
 import { StepSelectBranch } from './StepSelectBranch';
 import { StepSelectYear } from './StepSelectYear';
 import { StepVerifyEmail } from './StepVerifyEmail';
-import { StepVerifyPhone } from './StepVerifyPhone';
 import { CompletionScreen } from './CompletionScreen';
 import { useAppStore } from '@/store';
 import { toast } from 'sonner';
@@ -23,20 +22,17 @@ const STEPPER_LABELS = [
   { label: 'Branch' },
   { label: 'Year' },
   { label: 'Verify' },
-  { label: 'Phone' },
 ];
 
 interface OnboardingData {
   college: string;
   city: string;
   state: string;
-  phone: string;
   degree: string;
   branch: string;
   year: string;
   collegeVerified: boolean;
   emailVerified: boolean;
-  phoneVerified: boolean;
 }
 
 /** Certificate preview is shown only on academic steps (1-4) */
@@ -56,34 +52,31 @@ export function OnboardingFlow() {
     college: '',
     city: '',
     state: '',
-    phone: '',
     degree: '',
     branch: '',
     year: '',
     collegeVerified: false,
     emailVerified: oauthOnboarding, // OAuth users are already email-verified
-    phoneVerified: false,
   });
 
   const showCertificatePreview = useShowCertificatePreview(currentStep);
 
   // Map currentStep to stepper step
   // Steps 1-4: Academic steps (stepper 0-3)
-  // Steps 5-6: Verify steps (stepper 4-5)
+  // Step 5: Email verify step (stepper 4)
   const getStepperStep = () => {
     if (currentStep <= 1) return 0;
     if (currentStep === 2) return 1;
     if (currentStep === 3) return 2;
     if (currentStep === 4) return 3;
     if (currentStep === 5) return 4;
-    if (currentStep === 6) return 5;
-    return 5;
+    return 4;
   };
 
   const stepperStep = getStepperStep();
 
   const handleNext = useCallback(() => {
-    setCurrentStep((prev) => Math.min(prev + 1, 7));
+    setCurrentStep((prev) => Math.min(prev + 1, 6));
   }, []);
 
   const handlePrev = useCallback(() => {
@@ -113,7 +106,7 @@ export function OnboardingFlow() {
           branch: onboardingData.branch,
           year: onboardingData.year,
           collegeVerified: onboardingData.collegeVerified,
-          isVerified: onboardingData.emailVerified && onboardingData.phoneVerified,
+          isVerified: onboardingData.emailVerified,
         }),
       });
 
@@ -121,7 +114,7 @@ export function OnboardingFlow() {
 
       if (!res.ok) {
         toast.error(data.error || 'Failed to save profile');
-        setCurrentStep(7);
+        setCurrentStep(6);
         return;
       }
 
@@ -130,11 +123,11 @@ export function OnboardingFlow() {
       if (oauthOnboarding) {
         setOauthOnboarding(false);
       }
-      setCurrentStep(7);
+      setCurrentStep(6);
     } catch (error) {
       console.error('Profile update error:', error);
       toast.error('Something went wrong, but your account is ready!');
-      setCurrentStep(7);
+      setCurrentStep(6);
     }
   }, [token, onboardingData, setUser, oauthOnboarding, setOauthOnboarding]);
 
@@ -147,12 +140,11 @@ export function OnboardingFlow() {
     if (currentStep === 0) return '';
     if (currentStep >= 1 && currentStep <= 4) return `Step ${currentStep} of 4 — Academic`;
     if (currentStep === 5) return 'Email Verification';
-    if (currentStep === 6) return 'Phone Verification';
     return '';
   };
 
-  // Whether to show the stepper (steps 1-6)
-  const showStepper = currentStep >= 1 && currentStep <= 6;
+  // Whether to show the stepper (steps 1-5)
+  const showStepper = currentStep >= 1 && currentStep <= 5;
 
   // ─── Certificate preview props derived from onboarding data ───
   const certificateStudentName = user?.fullName || '';
@@ -227,7 +219,7 @@ export function OnboardingFlow() {
           </button>
         </div>
 
-        {currentStep > 0 && currentStep < 7 && (
+        {currentStep > 0 && currentStep < 6 && (
           <span
             className="animate-fade-in text-blue-200/40 text-sm font-[family-name:var(--font-poppins)]"
           >
@@ -260,14 +252,12 @@ export function OnboardingFlow() {
                     college: onboardingData.college,
                     city: onboardingData.city,
                     state: onboardingData.state,
-                    phone: onboardingData.phone,
                   }}
                   onUpdate={(data) =>
                     updateOnboardingData({
                       college: data.college,
                       city: data.city,
                       state: data.state,
-                      phone: data.phone,
                     })
                   }
                   onNext={handleNext}
@@ -302,10 +292,10 @@ export function OnboardingFlow() {
                   onNext={() => {
                     if (oauthOnboarding) {
                       // OAuth users already have verified emails — skip email verification step
-                      updateOnboardingData({ emailVerified: true, phoneVerified: false });
-                      setCurrentStep((prev) => Math.min(prev + 2, 7)); // skip step 5
+                      updateOnboardingData({ emailVerified: true });
+                      handleComplete();
                     } else {
-                      updateOnboardingData({ emailVerified: false, phoneVerified: false });
+                      updateOnboardingData({ emailVerified: false });
                       handleNext();
                     }
                   }}
@@ -374,23 +364,12 @@ export function OnboardingFlow() {
                 email={user?.email || ''}
                 onVerified={() => {
                   updateOnboardingData({ emailVerified: true });
-                  handleNext();
-                }}
-                onPrev={handlePrev}
-              />
-            )}
-            {currentStep === 6 && (
-              <StepVerifyPhone
-                key="verify-phone"
-                phone={onboardingData.phone || user?.phone || ''}
-                onVerified={() => {
-                  updateOnboardingData({ phoneVerified: true });
                   handleComplete();
                 }}
                 onPrev={handlePrev}
               />
             )}
-            {currentStep === 7 && (
+            {currentStep === 6 && (
               <CompletionScreen
                 key="completion"
                 userName={user?.fullName || 'Student'}

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" width="160" height="50">
+  <!-- CRED Logo - Black/White minimal -->
+  <defs>
+    <style>
+      .cred-text { font-family: 'Arial Black', 'Helvetica Neue', Arial, sans-serif; font-weight: 900; font-size: 22px; fill: #1A1A1A; letter-spacing: 3px; }
+    </style>
+  </defs>
+  <!-- Minimal CRED shield/diamond icon -->
+  <rect x="4" y="10" width="26" height="26" rx="5" fill="#1A1A1A"/>
+  <!-- White C inside -->
+  <text x="9" y="30" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="20" fill="#fff">C</text>
+  <!-- CRED text -->
+  <text x="36" y="29" class="cred-text">CRED</text>
+</svg>
