@@ -366,6 +366,11 @@ export function OnboardingFlow() {
                   updateOnboardingData({ emailVerified: true });
                   handleComplete();
                 }}
+                onSkip={() => {
+                  // Skip email verification — user can verify later from profile
+                  updateOnboardingData({ emailVerified: false });
+                  handleComplete();
+                }}
                 onPrev={handlePrev}
               />
             )}

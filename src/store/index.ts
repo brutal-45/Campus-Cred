@@ -172,11 +172,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       refreshToken: null,
       isAuthenticated: false,
       currentView: "landing",
+      previousView: null,
       selectedTaskId: null,
       selectedCertificateId: null,
       oauthUser: null,
       oauthOnboarding: false,
     });
+    // Navigate to landing page via Next.js router
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
   },
 
   selectedTaskId: null,

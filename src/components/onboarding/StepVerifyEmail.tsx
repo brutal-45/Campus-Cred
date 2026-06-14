@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Mail, Shield, Loader2, ArrowLeft, RefreshCw, CheckCircle2, Clock } from 'lucide-react';
+import { Mail, Shield, Loader2, ArrowLeft, RefreshCw, CheckCircle2, Clock, AlertCircle, SkipForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OTPInput } from '@/components/shared/OTPInput';
 import { CampusCredLogo } from '@/components/shared/CampusCredLogo';
@@ -11,6 +11,7 @@ interface StepVerifyEmailProps {
   email: string;
   onVerified: () => void;
   onPrev?: () => void;
+  onSkip?: () => void;
 }
 
 // Mask email: "john.doe@gmail.com" -> "j*******@gmail.com"
@@ -22,7 +23,7 @@ function maskEmail(email: string): string {
   return `${firstChar}${maskedPart}@${domain}`;
 }
 
-export function StepVerifyEmail({ email, onVerified, onPrev }: StepVerifyEmailProps) {
+export function StepVerifyEmail({ email, onVerified, onPrev, onSkip }: StepVerifyEmailProps) {
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -31,6 +32,8 @@ export function StepVerifyEmail({ email, onVerified, onPrev }: StepVerifyEmailPr
   const [resendTimer, setResendTimer] = useState(30);
   const [otpExpiry, setOtpExpiry] = useState(600); // 10 minutes in seconds
   const [maskedEmail, setMaskedEmail] = useState('');
+  const [displayedOtp, setDisplayedOtp] = useState<string | null>(null);
+  const [isConsoleMode, setIsConsoleMode] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const expiryRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -101,9 +104,14 @@ export function StepVerifyEmail({ email, onVerified, onPrev }: StepVerifyEmailPr
       setOtpExpiry(data.expiresIn || 600);
       setMaskedEmail(data.maskedEmail || maskEmail(email));
 
-      if (process.env.NODE_ENV === 'development' && data.otp) {
-        toast.success(`OTP sent to your email! (Dev: ${data.otp})`, { duration: 8000 });
+      // If OTP is returned in response (console mode or dev mode), show it on screen
+      if (data.otp) {
+        setDisplayedOtp(data.otp);
+        setIsConsoleMode(true);
+        toast.success(`OTP sent! (Showing on screen — email delivery not configured)`, { duration: 6000 });
       } else {
+        setDisplayedOtp(null);
+        setIsConsoleMode(false);
         toast.success('OTP sent to your email!', { duration: 5000 });
       }
     } catch {
@@ -150,8 +158,16 @@ export function StepVerifyEmail({ email, onVerified, onPrev }: StepVerifyEmailPr
   const handleResend = useCallback(() => {
     setOtp('');
     setError(false);
+    setDisplayedOtp(null);
     sendOtp();
   }, [sendOtp]);
+
+  const handleSkip = useCallback(() => {
+    toast.info('You can verify your email later from your profile settings.');
+    if (onSkip) {
+      onSkip();
+    }
+  }, [onSkip]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -201,6 +217,32 @@ export function StepVerifyEmail({ email, onVerified, onPrev }: StepVerifyEmailPr
             <span className="text-[10px] font-semibold text-success">Secure</span>
           </div>
         </div>
+
+        {/* Console mode: Show OTP on screen when email delivery isn't configured */}
+        {isConsoleMode && displayedOtp && !isVerified && (
+          <div className="mb-6 p-4 rounded-xl border border-amber-500/30 bg-amber-500/10">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="h-4 w-4 text-amber-400" />
+              <span className="text-amber-300 text-xs font-semibold">Email delivery not configured</span>
+            </div>
+            <p className="text-amber-200/70 text-[11px] mb-3">
+              Email service is set to console mode. Your OTP is shown below:
+            </p>
+            <div className="flex items-center justify-center gap-2">
+              {displayedOtp.split('').map((digit, i) => (
+                <div
+                  key={i}
+                  className="w-10 h-12 rounded-lg bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-200 text-xl font-bold font-mono"
+                >
+                  {digit}
+                </div>
+              ))}
+            </div>
+            <p className="text-amber-200/50 text-[10px] mt-2 text-center">
+              Enter this code below to verify your email
+            </p>
+          </div>
+        )}
 
         {/* OTP Input — 6 separate boxes */}
         <div className="mb-6">
@@ -290,6 +332,19 @@ export function StepVerifyEmail({ email, onVerified, onPrev }: StepVerifyEmailPr
                 : isSending
                   ? 'Sending...'
                   : 'Resend code'}
+            </button>
+          </div>
+        )}
+
+        {/* Skip for now */}
+        {!isVerified && onSkip && (
+          <div className="mt-3 text-center">
+            <button
+              onClick={handleSkip}
+              className="inline-flex items-center gap-1.5 text-sm text-blue-200/30 hover:text-blue-200/60 transition-colors"
+            >
+              <SkipForward className="h-3.5 w-3.5" />
+              Skip for now
             </button>
           </div>
         )}

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { useAppStore, User } from '@/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -9,8 +10,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { BackButton } from '@/components/shared/BackButton';
-import { ProfilePhotoUpload } from '@/components/auth/ProfilePhotoUpload';
 import { toast } from 'sonner';
 import {
   Camera,
@@ -35,6 +34,14 @@ import {
   Hash,
   Users,
   DollarSign,
+  ArrowLeft,
+  Download,
+  ExternalLink,
+  FileDown,
+  Share2,
+  Shield,
+  CheckCircle2,
+  LogOut,
 } from 'lucide-react';
 
 /* ── Types ── */
@@ -57,20 +64,29 @@ interface ProfileFormData {
   skills: string[];
   socialLinks: SocialLinkEntry[];
   profilePhoto: string;
-  // College-specific
   collegeName: string;
   address: string;
   naacRating: string;
   nirfRank: string;
   collegeWebsite: string;
   totalStudents: string;
-  // Mentor-specific
   designation: string;
   organization: string;
   experience: string;
   expertise: string[];
   hourlyRate: string;
   mentorBio: string;
+}
+
+interface Certificate {
+  id: string;
+  certificateId: string;
+  taskTitle: string;
+  degree: string;
+  branch: string;
+  issuedDate: string;
+  studentName: string;
+  pdfUrl?: string | null;
 }
 
 const SOCIAL_PLATFORMS = [
@@ -144,7 +160,7 @@ function parseSkills(raw: string | undefined): string[] {
 
 export function ProfileEditPage() {
   const router = useRouter();
-  const { user, token, setUser } = useAppStore();
+  const { user, token, setUser, logout } = useAppStore();
 
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -191,7 +207,6 @@ export function ProfileEditPage() {
     const socials = parseSocialLinks(user.socialLinks);
     const skills = parseSkills(user.skills);
 
-    // Pre-fill social links from known platforms
     const platformLinks: SocialLinkEntry[] = SOCIAL_PLATFORMS.map((p) => {
       const existing = socials.find(
         (s) => s.platform.toLowerCase() === p.key || s.platform.toLowerCase() === p.label.toLowerCase()
@@ -237,6 +252,21 @@ export function ProfileEditPage() {
   const isCollege = role === 'college';
   const isMentor = role === 'mentor';
 
+  // ── Fetch certificates for download ──
+  const { data: certData } = useQuery({
+    queryKey: ['profile-certificates'],
+    queryFn: async () => {
+      const res = await fetch('/api/student/certificates', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch certificates');
+      return res.json();
+    },
+    enabled: !!token && isStudent,
+  });
+
+  const certificates: Certificate[] = certData?.certificates || [];
+
   // ── Field updater ──
   const updateField = useCallback(<K extends keyof ProfileFormData>(key: K, value: ProfileFormData[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -269,16 +299,6 @@ export function ProfileEditPage() {
   }, [form.expertise, updateField]);
 
   // ── Photo handling ──
-  const handlePhotoSelect = useCallback((file: File | null, previewUrl: string | null) => {
-    if (file) {
-      setPhotoFile(file);
-      setPhotoPreview(previewUrl);
-    } else {
-      setPhotoFile(null);
-      setPhotoPreview(user?.profilePhoto || null);
-    }
-  }, [user?.profilePhoto]);
-
   const handleDirectPhotoChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -342,7 +362,6 @@ export function ProfileEditPage() {
         if (uploadedUrl) {
           photoUrl = uploadedUrl;
         } else if (photoFile) {
-          // Upload failed and we had a new file to upload — abort
           setSaving(false);
           return;
         }
@@ -368,7 +387,6 @@ export function ProfileEditPage() {
         socialLinks: JSON.stringify(socialLinksObj),
       };
 
-      // Student-specific fields
       if (isStudent) {
         body.college = form.college.trim();
         body.degree = form.degree.trim();
@@ -376,7 +394,6 @@ export function ProfileEditPage() {
         body.year = form.year.trim();
       }
 
-      // College-specific fields
       if (isCollege) {
         body.college = form.collegeName.trim();
         body.collegeName = form.collegeName.trim();
@@ -387,7 +404,6 @@ export function ProfileEditPage() {
         body.totalStudents = form.totalStudents ? parseInt(form.totalStudents, 10) : null;
       }
 
-      // Mentor-specific fields
       if (isMentor) {
         body.designation = form.designation.trim();
         body.organization = form.organization.trim();
@@ -414,7 +430,6 @@ export function ProfileEditPage() {
 
       const data = await res.json();
 
-      // 5. Update user in store
       if (data.user && setUser) {
         setUser({
           ...user,
@@ -431,6 +446,24 @@ export function ProfileEditPage() {
     }
   }, [token, form, photoFile, uploadPhoto, isStudent, isCollege, isMentor, user, setUser]);
 
+  // ── Certificate download ──
+  const handleDownloadCertPDF = useCallback((cert: Certificate) => {
+    if (cert.pdfUrl) {
+      const link = document.createElement('a');
+      link.href = cert.pdfUrl;
+      link.download = `${cert.certificateId}.pdf`;
+      link.target = '_blank';
+      link.click();
+    } else {
+      // Navigate to certificate page to view/download
+      router.push(`/dashboard/certificates/${cert.id}`);
+    }
+  }, [router]);
+
+  const handleViewCertificate = useCallback((certId: string) => {
+    router.push(`/dashboard/certificates/${certId}`);
+  }, [router]);
+
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -444,32 +477,47 @@ export function ProfileEditPage() {
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <BackButton onClick={() => router.push('/dashboard')} variant="icon" className="!bg-muted !border-[#E2E8F0] !text-foreground hover:!bg-muted/80" />
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-muted border border-border hover:bg-muted/80 transition-colors"
+            aria-label="Back to dashboard"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
           <div>
             <h1 className="text-2xl font-bold font-heading">Edit Profile</h1>
             <p className="text-sm text-text-secondary">Update your personal and professional details</p>
           </div>
         </div>
-        <Button
-          onClick={handleSave}
-          disabled={saving || uploadingPhoto}
-          className="gap-2 bg-navy text-white hover:bg-navy/90 dark:bg-electric dark:hover:bg-electric-dark shrink-0"
-        >
-          {saving || uploadingPhoto ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Save className="w-4 h-4" />
-          )}
-          {uploadingPhoto ? 'Uploading photo...' : saving ? 'Saving...' : 'Save Changes'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={logout}
+            className="gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-500/10 border-red-200 dark:border-red-500/20"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={saving || uploadingPhoto}
+            className="gap-2 bg-navy text-white hover:bg-navy/90 dark:bg-electric dark:hover:bg-electric-dark shrink-0"
+          >
+            {saving || uploadingPhoto ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            {uploadingPhoto ? 'Uploading...' : saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
       </div>
 
       {/* ── Profile Photo Hero ── */}
       <div className="animate-fade-in">
         <div className="relative bg-navy rounded-2xl overflow-hidden">
-          {/* Banner */}
           <div className="h-24 sm:h-32 hero-bg opacity-60" />
-          {/* Avatar */}
           <div className="relative px-6 pb-6 -mt-12 sm:-mt-14">
             <div className="relative inline-block group">
               <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border-4 border-white dark:border-navy-light shadow-xl bg-white">
@@ -484,7 +532,6 @@ export function ProfileEditPage() {
                   </div>
                 )}
               </div>
-              {/* Camera overlay */}
               <button
                 onClick={() => fileInputRef.current?.click()}
                 className="absolute inset-0 rounded-2xl flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-all duration-200"
@@ -502,28 +549,44 @@ export function ProfileEditPage() {
             </div>
             <div className="mt-3">
               <h2 className="text-xl font-bold text-white">{form.fullName || 'Your Name'}</h2>
-              <p className="text-white/60 text-sm capitalize">{role} {isStudent && user.campusCredUsername && `• @${user.campusCredUsername}`}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-white/60 text-sm capitalize">{role}</p>
+                {isStudent && user.campusCredUsername && (
+                  <span className="text-white/40 text-sm">• @{user.campusCredUsername}</span>
+                )}
+                {user.isVerified && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-green-500/20 text-green-400">
+                    <CheckCircle2 className="w-3 h-3" /> Verified
+                  </span>
+                )}
+              </div>
+              <p className="text-white/40 text-xs mt-1">{user.email}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Profile Photo Upload Section (uses existing component) ── */}
-      <div className="animate-fade-in" style={{ animationDelay: '50ms' }}>
-        <Card className="border-[#E2E8F0]">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Camera className="w-4 h-4 text-electric" /> Profile Photo
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ProfilePhotoUpload
-              onPhotoSelect={handlePhotoSelect}
-              fullName={form.fullName}
-            />
-          </CardContent>
-        </Card>
-      </div>
+      {/* ── Quick Stats (Students) ── */}
+      {isStudent && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-fade-in" style={{ animationDelay: '50ms' }}>
+          <div className="bg-muted/50 border border-border rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-navy dark:text-electric">{user.campusCredScore ?? 0}</p>
+            <p className="text-[10px] text-text-secondary uppercase tracking-wider font-medium">Score</p>
+          </div>
+          <div className="bg-muted/50 border border-border rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-navy dark:text-electric">{user.level}</p>
+            <p className="text-[10px] text-text-secondary uppercase tracking-wider font-medium">Level</p>
+          </div>
+          <div className="bg-muted/50 border border-border rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-navy dark:text-electric">{user.streakDays ?? 0}</p>
+            <p className="text-[10px] text-text-secondary uppercase tracking-wider font-medium">Day Streak</p>
+          </div>
+          <div className="bg-muted/50 border border-border rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-navy dark:text-electric">{certificates.length}</p>
+            <p className="text-[10px] text-text-secondary uppercase tracking-wider font-medium">Certificates</p>
+          </div>
+        </div>
+      )}
 
       {/* ── Personal Information ── */}
       <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
@@ -537,7 +600,7 @@ export function ProfileEditPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-1.5 block text-foreground">
-                  Full Name <span className="text-danger">*</span>
+                  Full Name <span className="text-red-500">*</span>
                 </label>
                 <Input
                   value={form.fullName}
@@ -596,7 +659,6 @@ export function ProfileEditPage() {
               <p className="text-xs text-text-secondary mt-1">{form.bio.length}/500 characters</p>
             </div>
 
-            {/* CampusCred Username (display only for students) */}
             {isStudent && user.campusCredUsername && (
               <div>
                 <label className="text-sm font-medium mb-1.5 block text-foreground">
@@ -621,7 +683,7 @@ export function ProfileEditPage() {
           <Card className="border-[#E2E8F0]">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <GraduationCap className="w-4 h-4 text-purple" /> Education
+                <GraduationCap className="w-4 h-4 text-purple-500" /> Education
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -666,157 +728,6 @@ export function ProfileEditPage() {
         </div>
       )}
 
-      {/* ── College Info Section (Colleges) ── */}
-      {isCollege && (
-        <div className="animate-fade-in" style={{ animationDelay: '150ms' }}>
-          <Card className="border-[#E2E8F0]">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-electric" /> College Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-1.5 block text-foreground">College Name</label>
-                <Input
-                  value={form.collegeName}
-                  onChange={(e) => updateField('collegeName', e.target.value)}
-                  placeholder="Indian Institute of Technology"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1.5 block text-foreground">Address</label>
-                <Input
-                  value={form.address}
-                  onChange={(e) => updateField('address', e.target.value)}
-                  placeholder="Powai, Mumbai, Maharashtra 400076"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block text-foreground">
-                    <Award className="w-3.5 h-3.5 inline mr-1 text-text-secondary" />
-                    NAAC Rating
-                  </label>
-                  <Input
-                    value={form.naacRating}
-                    onChange={(e) => updateField('naacRating', e.target.value)}
-                    placeholder="A++"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block text-foreground">
-                    <Hash className="w-3.5 h-3.5 inline mr-1 text-text-secondary" />
-                    NIRF Rank
-                  </label>
-                  <Input
-                    value={form.nirfRank}
-                    onChange={(e) => updateField('nirfRank', e.target.value)}
-                    placeholder="1"
-                    type="number"
-                    min="1"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block text-foreground">
-                    <Globe className="w-3.5 h-3.5 inline mr-1 text-text-secondary" />
-                    Website
-                  </label>
-                  <Input
-                    value={form.collegeWebsite}
-                    onChange={(e) => updateField('collegeWebsite', e.target.value)}
-                    placeholder="https://iitb.ac.in"
-                    type="url"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block text-foreground">
-                    <Users className="w-3.5 h-3.5 inline mr-1 text-text-secondary" />
-                    Total Students
-                  </label>
-                  <Input
-                    value={form.totalStudents}
-                    onChange={(e) => updateField('totalStudents', e.target.value)}
-                    placeholder="10000"
-                    type="number"
-                    min="0"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* ── Professional Section (Mentors) ── */}
-      {isMentor && (
-        <div className="animate-fade-in" style={{ animationDelay: '150ms' }}>
-          <Card className="border-[#E2E8F0]">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-amber-500" /> Professional Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block text-foreground">Designation</label>
-                  <Input
-                    value={form.designation}
-                    onChange={(e) => updateField('designation', e.target.value)}
-                    placeholder="Senior Software Engineer"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block text-foreground">Organization</label>
-                  <Input
-                    value={form.organization}
-                    onChange={(e) => updateField('organization', e.target.value)}
-                    placeholder="Google India"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block text-foreground">Experience</label>
-                  <Input
-                    value={form.experience}
-                    onChange={(e) => updateField('experience', e.target.value)}
-                    placeholder="8 years"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block text-foreground">
-                    <DollarSign className="w-3.5 h-3.5 inline mr-1 text-text-secondary" />
-                    Hourly Rate (INR)
-                  </label>
-                  <Input
-                    value={form.hourlyRate}
-                    onChange={(e) => updateField('hourlyRate', e.target.value)}
-                    placeholder="1500"
-                    type="number"
-                    min="0"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1.5 block text-foreground">Bio</label>
-                <Textarea
-                  value={form.mentorBio}
-                  onChange={(e) => updateField('mentorBio', e.target.value)}
-                  placeholder="Tell students about your mentoring style and expertise..."
-                  className="min-h-[100px] resize-none"
-                  maxLength={500}
-                />
-                <p className="text-xs text-text-secondary mt-1">{form.mentorBio.length}/500 characters</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
       {/* ── Skills Section (Students) ── */}
       {isStudent && (
         <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
@@ -833,7 +744,7 @@ export function ProfileEditPage() {
                     {skill}
                     <button
                       onClick={() => removeSkill(skill)}
-                      className="hover:text-danger transition-colors ml-0.5"
+                      className="hover:text-red-500 transition-colors ml-0.5"
                       aria-label={`Remove ${skill}`}
                     >
                       <X className="w-3 h-3" />
@@ -873,68 +784,85 @@ export function ProfileEditPage() {
         </div>
       )}
 
-      {/* ── Expertise Section (Mentors) ── */}
-      {isMentor && (
-        <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+      {/* ── Certificates Section (Students) ── */}
+      {isStudent && (
+        <div className="animate-fade-in" style={{ animationDelay: '250ms' }}>
           <Card className="border-[#E2E8F0]">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-purple" /> Expertise
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {form.expertise.map((item) => (
-                  <Badge key={item} variant="secondary" className="px-3 py-1.5 text-sm gap-1.5 pr-2">
-                    {item}
-                    <button
-                      onClick={() => removeExpertise(item)}
-                      className="hover:text-danger transition-colors ml-0.5"
-                      aria-label={`Remove ${item}`}
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </Badge>
-                ))}
-                {form.expertise.length === 0 && (
-                  <p className="text-sm text-text-secondary">No expertise areas added yet.</p>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Award className="w-4 h-4 text-gold" /> My Certificates
+                </CardTitle>
+                {certificates.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => router.push('/dashboard/certificates')}
+                    className="text-xs text-electric hover:text-electric-dark"
+                  >
+                    View All <ArrowLeft className="w-3 h-3 ml-1 rotate-180" />
+                  </Button>
                 )}
               </div>
-              <div className="flex gap-2">
-                <Input
-                  value={newExpertise}
-                  onChange={(e) => setNewExpertise(e.target.value)}
-                  placeholder="Type an expertise area and press Enter..."
-                  className="flex-1"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addExpertise();
-                    }
-                  }}
-                  maxLength={30}
-                />
-                <Button
-                  size="sm"
-                  onClick={addExpertise}
-                  disabled={!newExpertise.trim() || form.expertise.length >= 15}
-                  className="gap-1 bg-electric hover:bg-electric-dark text-white shrink-0"
-                >
-                  <Plus className="w-4 h-4" /> Add
-                </Button>
-              </div>
-              <p className="text-xs text-text-secondary">{form.expertise.length}/15 expertise areas added</p>
+            </CardHeader>
+            <CardContent>
+              {certificates.length === 0 ? (
+                <div className="text-center py-8">
+                  <Award className="w-10 h-10 text-text-secondary/30 mx-auto mb-2" />
+                  <p className="text-sm text-text-secondary">No certificates yet</p>
+                  <p className="text-xs text-text-secondary/60 mt-1">Complete tasks to earn verified certificates</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {certificates.slice(0, 3).map((cert) => (
+                    <div
+                      key={cert.id}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border hover:bg-muted/70 transition-colors"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-navy flex items-center justify-center shrink-0">
+                        <Award className="w-5 h-5 text-gold" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{cert.taskTitle}</p>
+                        <p className="text-[10px] text-text-secondary">
+                          {cert.certificateId} • {new Date(cert.issuedDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewCertificate(cert.id)}
+                          className="h-8 w-8 p-0 text-text-secondary hover:text-electric"
+                          title="View Certificate"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownloadCertPDF(cert)}
+                          className="h-8 w-8 p-0 text-text-secondary hover:text-electric"
+                          title="Download PDF"
+                        >
+                          <FileDown className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
       )}
 
       {/* ── Social Links Section ── */}
-      <div className="animate-fade-in" style={{ animationDelay: '250ms' }}>
+      <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
         <Card className="border-[#E2E8F0]">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <Link2 className="w-4 h-4 text-purple" /> Social Links
+              <Link2 className="w-4 h-4 text-purple-500" /> Social Links
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -969,12 +897,50 @@ export function ProfileEditPage() {
         </Card>
       </div>
 
+      {/* ── Account Actions ── */}
+      <div className="animate-fade-in" style={{ animationDelay: '350ms' }}>
+        <Card className="border-[#E2E8F0]">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Shield className="w-4 h-4 text-text-secondary" /> Account
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button
+              variant="outline"
+              onClick={() => router.push('/dashboard/settings/security')}
+              className="w-full justify-start gap-2"
+            >
+              <Shield className="w-4 h-4" />
+              Security Settings
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (confirm('Are you sure you want to sign out?')) {
+                  logout();
+                }
+              }}
+              className="w-full justify-start gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-500/10 border-red-200 dark:border-red-500/20"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* ── Bottom Save Bar ── */}
       <div className="sticky bottom-0 z-40 bg-white/80 dark:bg-navy/80 backdrop-blur-md border-t border-[#E2E8F0] dark:border-navy-lighter -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 py-3">
         <div className="flex items-center justify-between max-w-6xl mx-auto">
-          <p className="text-sm text-text-secondary hidden sm:block">
-            {saving ? 'Saving your changes...' : 'Make changes and click Save'}
-          </p>
+          <Button
+            variant="ghost"
+            onClick={() => router.push('/dashboard')}
+            className="gap-1.5 text-text-secondary"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </Button>
           <Button
             onClick={handleSave}
             disabled={saving || uploadingPhoto}
@@ -985,7 +951,7 @@ export function ProfileEditPage() {
             ) : (
               <Save className="w-4 h-4" />
             )}
-            {uploadingPhoto ? 'Uploading photo...' : saving ? 'Saving...' : 'Save Changes'}
+            {uploadingPhoto ? 'Uploading...' : saving ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
       </div>

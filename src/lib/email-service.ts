@@ -2,11 +2,19 @@
  * Email Service — Production-grade email delivery for OTP and notifications
  *
  * Supports:
+ * - Resend (https://resend.com — free 100 emails/day, easiest setup)
  * - Nodemailer (SMTP — Gmail, SendGrid, AWS SES, etc.)
- * - Console log (development mode)
+ * - Console log (development/testing mode)
  *
  * Environment Variables:
- * - EMAIL_PROVIDER: "smtp" | "console" (default: "console")
+ * - EMAIL_PROVIDER: "resend" | "smtp" | "console" (default: "console")
+ *
+ * For Resend:
+ * - RESEND_API_KEY: Your Resend API key (re_xxxx...)
+ * - EMAIL_FROM: Sender email verified in Resend (default: noreply@campuscred.in)
+ * - EMAIL_FROM_NAME: Sender name (default: CampusCred)
+ *
+ * For SMTP:
  * - SMTP_HOST: SMTP server hostname (e.g., smtp.gmail.com)
  * - SMTP_PORT: SMTP port (default: 587)
  * - SMTP_SECURE: Use SSL (default: false for STARTTLS)
@@ -65,11 +73,65 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
   const provider = process.env.EMAIL_PROVIDER || 'console';
 
   switch (provider) {
+    case 'resend':
+      return sendViaResend(options);
     case 'smtp':
       return sendViaSmtp(options);
     case 'console':
     default:
       return sendViaConsole(options);
+  }
+}
+
+/**
+ * Resend — Modern email API (free 100 emails/day, easiest setup)
+ * Get your API key at https://resend.com
+ */
+async function sendViaResend(options: EmailOptions): Promise<EmailResult> {
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    console.error('[EMAIL] RESEND_API_KEY not configured, falling back to console');
+    return sendViaConsole(options);
+  }
+
+  try {
+    const { Resend } = await import('resend');
+    const resend = new Resend(apiKey);
+
+    const fromEmail = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+    const fromName = process.env.EMAIL_FROM_NAME || 'CampusCred';
+
+    const { data, error } = await resend.emails.send({
+      from: `${fromName} <${fromEmail}>`,
+      to: [options.to],
+      subject: options.subject,
+      html: options.html,
+      text: options.text,
+    });
+
+    if (error) {
+      console.error('[EMAIL] Resend error:', error.message);
+      return {
+        success: false,
+        error: error.message,
+        provider: 'resend',
+      };
+    }
+
+    console.log(`[EMAIL-RESEND] Sent to ${maskEmail(options.to)}, id: ${data?.id}`);
+    return {
+      success: true,
+      messageId: data?.id || `resend-${Date.now()}`,
+      provider: 'resend',
+    };
+  } catch (error: any) {
+    console.error('[EMAIL] Resend exception:', error.message);
+    return {
+      success: false,
+      error: error.message,
+      provider: 'resend',
+    };
   }
 }
 
@@ -130,11 +192,11 @@ async function sendViaSmtp(options: EmailOptions): Promise<EmailResult> {
 }
 
 /**
- * Console — Development mode, logs email to console
+ * Console — Development/testing mode, logs email to console
  */
 async function sendViaConsole(options: EmailOptions): Promise<EmailResult> {
   console.log(`\n${'='.repeat(60)}`);
-  console.log(`📧 [EMAIL-DEV] To: ${maskEmail(options.to)}`);
+  console.log(`[EMAIL-CONSOLE] To: ${maskEmail(options.to)}`);
   console.log(`   Subject: ${options.subject}`);
   console.log(`   Body: ${options.text}`);
   console.log(`${'='.repeat(60)}\n`);

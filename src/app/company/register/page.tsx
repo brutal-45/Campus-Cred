@@ -16,6 +16,7 @@ import {
  Globe,
  Mail,
  Lock,
+ Phone,
  User,
  Briefcase,
  Upload,
@@ -35,6 +36,7 @@ export default function CompanyRegisterPage() {
  const [form, setForm] = React.useState({
  fullName: '',
  email: '',
+ phone: '',
  password: '',
  confirmPassword: '',
  companyName: '',
@@ -75,12 +77,14 @@ export default function CompanyRegisterPage() {
  if (!validate()) return;
  setIsLoading(true);
  try {
+ const phoneDigits = form.phone.replace(/\D/g, '').replace(/^91/, '');
  const res = await fetch('/api/auth/register', {
  method: 'POST',
  headers: { 'Content-Type': 'application/json' },
  body: JSON.stringify({
  fullName: form.fullName.trim(),
  email: form.email.trim().toLowerCase(),
+ phone: phoneDigits || undefined,
  password: form.password,
  role: 'company',
  companyName: form.companyName.trim(),
@@ -195,7 +199,8 @@ export default function CompanyRegisterPage() {
  </div>
  </div>
 
- {/* Email */}
+ {/* Email & Phone */}
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
  <div className="space-y-2">
  <Label className="text-sm font-medium">Email <span className="text-red-500">*</span></Label>
  <div className="relative">
@@ -209,6 +214,20 @@ export default function CompanyRegisterPage() {
  />
  </div>
  {errors.email && <p className="text-red-500 text-xs">{errors.email}</p>}
+ </div>
+ <div className="space-y-2">
+ <Label className="text-sm font-medium">Phone <span className="text-text-secondary text-xs">(optional)</span></Label>
+ <div className="relative">
+ <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
+ <Input
+ type="tel"
+ value={form.phone}
+ onChange={(e) => updateField('phone', e.target.value)}
+ placeholder="+91 XXXXX XXXXX"
+ className="pl-10"
+ />
+ </div>
+ </div>
  </div>
 
  {/* Password */}
