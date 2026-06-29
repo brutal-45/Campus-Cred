@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CampusCredLogo } from '@/components/shared/CampusCredLogo';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
+import { useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   FileText,
@@ -35,6 +36,7 @@ import {
 
 const sidebarNavItems = [
   { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Certificates', href: '/dashboard/certificates', icon: Award },
   { label: 'Portfolio', href: '/dashboard/portfolio', icon: User },
   { label: 'Resume', href: '/dashboard/resume', icon: FileText },
   { label: 'Challenges', href: '/dashboard/challenges', icon: Zap },
@@ -64,8 +66,9 @@ const utilityItems = [
  * - No glassmorphism, no continuous animations
  */
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout, navigate, isDarkMode } = useAppStore();
+  const { user, logout, isDarkMode } = useAppStore();
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
 
@@ -162,7 +165,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <aside className={`hidden lg:flex flex-col bg-navy sticky top-0 h-screen transition-all duration-200 ${sidebarCollapsed ? 'w-16' : 'w-60'}`}>
           {/* Sidebar header with logo */}
           <div className="h-16 flex items-center px-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
-            <button onClick={() => navigate('landing')} className="focus:outline-none">
+            <button onClick={() => router.push('/')} className="focus:outline-none">
               <CampusCredLogo size={sidebarCollapsed ? 28 : 34} variant={sidebarCollapsed ? 'icon' : 'white'} />
             </button>
             <button
@@ -248,7 +251,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 return (
                   <button
                     key={item.label}
-                    onClick={() => navigate('security' as any)}
+                    onClick={() => router.push('/dashboard/settings/security')}
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/70 sidebar-hover hover:text-white transition-colors border-l-[3px] border-transparent ${sidebarCollapsed ? 'justify-center px-2' : ''}`}
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
@@ -272,7 +275,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               );
             })}
             <button
-              onClick={() => navigate('landing')}
+              onClick={() => router.push('/')}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/70 sidebar-hover hover:text-white transition-colors border-l-[3px] border-transparent ${sidebarCollapsed ? 'justify-center px-2' : ''}`}
             >
               <Home className="w-4 h-4 flex-shrink-0" />

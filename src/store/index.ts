@@ -157,11 +157,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   setRefreshToken: (refreshToken) => set({ refreshToken }),
   logout: () => {
     // Call logout API to invalidate refresh token
-    const { refreshToken } = get();
+    const { refreshToken, token } = get();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
     if (refreshToken) {
       fetch('/api/auth/logout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ refreshToken }),
       }).catch(() => {});
     }

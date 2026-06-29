@@ -33,6 +33,7 @@ import { CampusCredLogo } from './CampusCredLogo';
 import { ThemeToggle } from './ThemeToggle';
 import { useAppStore } from '@/store';
 import type { AppView } from '@/store';
+import { useRouter } from 'next/navigation';
 
 interface NavItem {
   label: string;
@@ -60,6 +61,7 @@ interface NavItem {
  */
 export function Navbar() {
   const { currentView, navigate, user, isAuthenticated, logout, language, setLanguage, isDarkMode } = useAppStore();
+  const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -103,7 +105,31 @@ export function Navbar() {
   const navItems = getNavItems();
 
   const handleNavigate = (view: AppView) => {
-    navigate(view);
+    // Map Zustand views to Next.js routes
+    const routeMap: Partial<Record<AppView, string>> = {
+      landing: '/',
+      login: '/login',
+      register: '/register',
+      onboarding: '/onboarding',
+      dashboard: '/dashboard',
+      task: '/dashboard/tasks',
+      certificate: '/dashboard/certificates',
+      portfolio: '/dashboard/portfolio',
+      admin: '/admin',
+      company: '/company/dashboard',
+      mentor: '/mentor/dashboard',
+      college: '/college/dashboard',
+      'company-register': '/company/register',
+      'mentor-register': '/mentor/register',
+      'college-register': '/college/register',
+      security: '/dashboard/settings/security',
+    };
+    const route = routeMap[view];
+    if (route) {
+      router.push(route);
+    } else {
+      navigate(view);
+    }
     setMobileOpen(false);
   };
 
@@ -190,7 +216,7 @@ export function Navbar() {
                   <LayoutDashboard className="mr-2 h-4 w-4" />
                   Dashboard
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleNavigate('dashboard')} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => router.push('/dashboard/profile')} className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
                   Profile
                 </DropdownMenuItem>

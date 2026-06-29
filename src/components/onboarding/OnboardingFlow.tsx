@@ -15,6 +15,7 @@ import { StepVerifyEmail } from './StepVerifyEmail';
 import { CompletionScreen } from './CompletionScreen';
 import { useAppStore } from '@/store';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 const STEPPER_LABELS = [
   { label: 'Academic' },
@@ -41,7 +42,8 @@ function useShowCertificatePreview(step: number) {
 }
 
 export function OnboardingFlow() {
-  const { user, setUser, token, navigate, oauthUser, oauthOnboarding, setOauthOnboarding } = useAppStore();
+  const { user, setUser, token, oauthUser, oauthOnboarding, setOauthOnboarding } = useAppStore();
+  const router = useRouter();
 
   // OAuth users skip Step 0 (StepRegister) — start at Step 1 (StepPersonalInfo)
   const initialStep = oauthOnboarding ? 1 : 0;
@@ -119,6 +121,19 @@ export function OnboardingFlow() {
       }
 
       setUser(data.user);
+
+      // Auto-generate welcome certificate for students
+      try {
+        await fetch('/api/certificates/welcome', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      } catch {
+        // Certificate generation failure shouldn't block onboarding
+      }
+
       // Clear OAuth onboarding state after completion
       if (oauthOnboarding) {
         setOauthOnboarding(false);
@@ -132,8 +147,8 @@ export function OnboardingFlow() {
   }, [token, onboardingData, setUser, oauthOnboarding, setOauthOnboarding]);
 
   const handleGoToDashboard = useCallback(() => {
-    navigate('dashboard');
-  }, [navigate]);
+    router.push('/dashboard');
+  }, [router]);
 
   // Determine step label
   const getStepLabel = () => {
@@ -200,7 +215,7 @@ export function OnboardingFlow() {
           <BackButton
             onClick={() => {
               if (currentStep === 0) {
-                navigate('landing');
+                router.push('/');
               } else {
                 handlePrev();
               }
@@ -208,7 +223,7 @@ export function OnboardingFlow() {
             to={currentStep === 0 ? 'Home' : 'Previous Step'}
           />
           <button
-            onClick={() => navigate('landing')}
+            onClick={() => router.push('/')}
             className="flex items-center gap-2 group"
           >
             <CampusCredLogo
