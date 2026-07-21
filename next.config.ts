@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from "next"; 
 
 const nextConfig: NextConfig = {
   // No "output: standalone" — Render runs next start directly
