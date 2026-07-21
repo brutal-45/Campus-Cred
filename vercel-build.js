@@ -1,4 +1,4 @@
-/**
+/** 
  * Vercel Build Script
  *
  * This script runs during Vercel's build phase to:
