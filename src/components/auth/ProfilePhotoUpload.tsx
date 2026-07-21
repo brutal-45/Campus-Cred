@@ -1,4 +1,4 @@
-'use client';
+'use client'; 
 
 import React, { useState, useRef, useCallback } from 'react';
 import { Camera, Upload, X, Crop, Check } from 'lucide-react';
