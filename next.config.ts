@@ -23,6 +23,12 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '2mb',
     },
+    // Optimize for serverless environments (Vercel)
+    serverComponents: true,
+  },
+  // Prevent hydration errors during session restoration
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error'] } : false,
   },
 };
 

@@ -7,6 +7,8 @@ services:
     buildCommand: npm run render-build
     startCommand: node server.js
     healthCheckPath: /api/health
+    # Prevent auto-deploy on every push (optional, uncomment if needed)
+    # autoDeploy: false
     envVars:
       - key: NODE_ENV
         value: production
