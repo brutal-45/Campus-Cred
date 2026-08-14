@@ -120,7 +120,7 @@ The platform serves four user roles: **Students**, **Companies**, **Colleges**, 
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/campuscred.git
+git clone https://github.com/brutal-45/Campus-Cred.git
 cd campuscred
 ```
 
