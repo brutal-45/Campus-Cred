@@ -174,16 +174,8 @@ npx prisma db push
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](campus-cred.onrender.com) in your browser.
 
-### 6. Admin Login
-
-The platform has a built-in admin account that auto-creates on first login:
-
-| Field | Value |
-|-------|-------|
-| **Email** | `creatorsports81@gmail.com` |
-| **Password** | `Viraj@133` |
 
 > **Note:** Admin registration is locked — no other email can register or login as admin.
 
