@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: campuscred
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm run render-build
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: campuscred-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: SMS_PROVIDER
+        value: console
+      - key: EMAIL_PROVIDER
+        value: console
+      - key: PORT
+        value: 3000
+
+databases:
+  - name: campuscred-db
+    databaseName: campuscred
+    user: campuscred
+    plan: free
