@@ -16,11 +16,15 @@ import { useTokenRefresh } from '@/hooks/useTokenRefresh';
  * 2. **Silent token auto-refresh** – Delegates to the `useTokenRefresh` hook
  *    which periodically checks whether the access token is about to expire and
  *    silently refreshes it.
+ * 
+ * 3. **Serverless/Render optimization** – Includes timeout handling and graceful
+ *    degradation for serverless environments (Vercel) and sleeping servers (Render free tier).
+ *    Prevents infinite loading loops during cold starts.
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { token, isAuthenticated, setToken, setUser, logout } = useAppStore();
   const [isRestoring, setIsRestoring] = useState(true);
-
+  
   // Activate the silent auto-refresh mechanism
   useTokenRefresh();
 
@@ -35,12 +39,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Set a maximum timeout for session restoration (4 seconds for serverless)
+      const RESTORE_TIMEOUT = 4000;
+      
       try {
+        // Use AbortController for timeout handling
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), RESTORE_TIMEOUT);
+        
         const res = await fetch('/api/auth/refresh-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({}), // Server reads from HttpOnly cookie
+          signal: controller.signal,
         });
+        
+        clearTimeout(timeoutId);
 
         if (cancelled) return;
 
@@ -51,9 +65,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             // Optionally fetch the user profile to restore the full session
             try {
+              const profileController = new AbortController();
+              const profileTimeoutId = setTimeout(() => profileController.abort(), 3000);
+              
               const profileRes = await fetch('/api/user/profile', {
                 headers: { Authorization: `Bearer ${data.token}` },
+                signal: profileController.signal,
               });
+              
+              clearTimeout(profileTimeoutId);
+              
               if (profileRes.ok) {
                 const profileData = await profileRes.json();
                 if (profileData.user) {
@@ -62,18 +83,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               }
             } catch {
               // Profile fetch failed – token is still valid, user can retry
+              // This is common in serverless environments
             }
           } else {
             // No token returned – session is invalid
             logout();
           }
-        } else {
+        } else if (res.status === 401 || res.status === 403) {
           // Refresh cookie is invalid/expired – clear any stale state
           logout();
+        } else {
+          // Server error or timeout - likely serverless cold start or sleeping server
+          // Don't logout, just stop showing the loader and let user interact
+          // The useTokenRefresh hook will retry later when user performs actions
+          console.log('Session restore: server not ready (cold start), continuing without auth');
         }
-      } catch {
-        // Network error – we can't determine session state right now
-        // Leave whatever state exists (could be offline)
+      } catch (error) {
+        // Network error, timeout, or abort - common in serverless/cold starts
+        // Don't logout, just allow the app to continue
+        // User can still interact, and token refresh will retry later
+        console.log('Session restore: interrupted (cold start/network), continuing without auth');
       } finally {
         if (!cancelled) {
           setIsRestoring(false);
@@ -88,13 +117,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []); // Run once on mount
 
-  // While restoring session, render nothing (or a minimal loader)
+  // While restoring session, render a minimal loader (fast to paint)
   if (isRestoring) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-          <p className="text-sm text-muted-foreground">Restoring session…</p>
+          <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
