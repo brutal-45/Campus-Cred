@@ -1,0 +1,19 @@
+# Ignore these files during Render deployment
+node_modules
+.git
+.env*
+.vercel
+*.log
+dev.log
+server.log
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+coverage
+test
+prompt
+.claude
+.z-ai-config
+local-*
