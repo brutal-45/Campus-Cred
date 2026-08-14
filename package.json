@@ -8,6 +8,7 @@
     "render-build": "node render-build.js",
     "vercel-build": "node vercel-build.js",
     "start": "next start -p $PORT",
+    "start:render": "node server.js",
     "lint": "eslint .",
     "db:push": "npx prisma@6 db push",
     "db:generate": "npx prisma@6 generate",

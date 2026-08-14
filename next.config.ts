@@ -1,16 +1,29 @@
-import type { NextConfig } from "next"; 
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // No "output: standalone" — Render runs next start directly
+  // Enable standalone output for Docker deployments (Render, etc.)
+  output: 'standalone',
   typescript: {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
   turbopack: {},
   images: {
-    unoptimized: true,
+    unoptimized: false,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
   },
   serverExternalPackages: ["@prisma/client", "puppeteer", "sharp", "bcryptjs", "canvas"],
+  // Ensure API routes are properly optimized
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
 };
 
 export default nextConfig;
