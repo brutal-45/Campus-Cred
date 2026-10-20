@@ -36,26 +36,28 @@ export function HeroSection() {
   const [stats, setStats] = useState({ students: 75, certificates: 60, companies: 15, branches: 124 });
 
   useEffect(() => {
-    fetchStats();
-  }, []);
+    let cancelled = false;
 
-  const fetchStats = async () => {
-    try {
-      const res = await fetch('/api/stats');
-      if (res.ok) {
-        const data = await res.json();
-        // Use real DB counts; fall back to minimums if DB has fewer
+    fetch('/api/stats')
+      .then(async (res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data || cancelled) return;
+        // Use real DB counts; fall back to minimums if DB has fewer.
         setStats({
           students: Math.max(data.students || 0, 75),
           certificates: Math.max(data.certificates || 0, 60),
           companies: Math.max(data.companies || 0, 15),
           branches: Math.max(data.branches || 0, 124),
         });
-      }
-    } catch {
-      // Keep default minimum values
-    }
-  };
+      })
+      .catch(() => {
+        // Keep default minimum values when the stats service is unavailable.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const currentLevel = LEVEL_ORDER[activeLevel];
   const currentPreset = LEVEL_CERTIFICATE_PRESETS[currentLevel];

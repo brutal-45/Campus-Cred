@@ -43,7 +43,6 @@ import { toast } from 'sonner';
 import { CampusCredLogo } from '@/components/shared/CampusCredLogo';
 import { BackButton } from '@/components/shared/BackButton';
 import { PLATFORM_DOMAIN } from '@/lib/constants';
-import { AuthProvider } from '@/providers/AuthProvider';
 
 // ─── Company Register Form Component ───
 function CompanyRegisterForm() {
@@ -269,9 +268,5 @@ function AppRouter() {
 
 // ─── Main App Entry ───
 export default function Home() {
-  return (
-    <AuthProvider>
-      <AppRouter />
-    </AuthProvider>
-  );
+  return <AppRouter />;
 }

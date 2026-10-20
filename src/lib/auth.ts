@@ -1,8 +1,16 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
-const JWT_SECRET = process.env.JWT_SECRET || "skillbridge-secret-key-change-in-production";
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "skillbridge-refresh-secret";
+function getJwtSecret(name: 'JWT_SECRET' | 'JWT_REFRESH_SECRET'): string {
+  const secret = process.env[name];
+  if (secret) return secret;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(`${name} must be configured in production.`);
+  }
+  return name === 'JWT_SECRET'
+    ? 'local-development-only-access-secret'
+    : 'local-development-only-refresh-secret';
+}
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
@@ -13,16 +21,16 @@ export async function comparePassword(password: string, hash: string): Promise<b
 }
 
 export function generateAccessToken(payload: { userId: string; email: string; role: string }): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "15m" });
+  return jwt.sign(payload, getJwtSecret('JWT_SECRET'), { expiresIn: "15m" });
 }
 
 export function generateRefreshToken(payload: { userId: string; email: string; role: string }): string {
-  return jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: "7d" });
+  return jwt.sign(payload, getJwtSecret('JWT_REFRESH_SECRET'), { expiresIn: "7d" });
 }
 
 export function verifyAccessToken(token: string): { userId: string; email: string; role: string } | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as { userId: string; email: string; role: string };
+    return jwt.verify(token, getJwtSecret('JWT_SECRET')) as { userId: string; email: string; role: string };
   } catch {
     return null;
   }
@@ -30,7 +38,7 @@ export function verifyAccessToken(token: string): { userId: string; email: strin
 
 export function verifyRefreshToken(token: string): { userId: string; email: string; role: string } | null {
   try {
-    return jwt.verify(token, JWT_REFRESH_SECRET) as { userId: string; email: string; role: string };
+    return jwt.verify(token, getJwtSecret('JWT_REFRESH_SECRET')) as { userId: string; email: string; role: string };
   } catch {
     return null;
   }

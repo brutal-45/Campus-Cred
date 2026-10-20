@@ -238,6 +238,14 @@ async function sendViaConsole(
   otp: string,
   purpose: string
 ): Promise<SmsResult> {
+  if (process.env.NODE_ENV === 'production') {
+    return {
+      success: false,
+      error: 'Console SMS delivery is disabled in production. Configure MSG91 or Twilio.',
+      provider: 'console',
+    };
+  }
+
   console.log(`\n${'='.repeat(50)}`);
   console.log(`📱 [SMS-DEV] OTP for ${maskPhone(phone)}`);
   console.log(`   Code: ${otp}`);

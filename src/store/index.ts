@@ -219,7 +219,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       const newMode = !state.isDarkMode;
       if (typeof document !== "undefined") {
         document.documentElement.classList.toggle("dark", newMode);
-        localStorage.setItem("campuscred-dark-mode", newMode ? "true" : "false");
+        try {
+          localStorage.setItem("campuscred-dark-mode", newMode ? "true" : "false");
+        } catch {
+          // Continue working when browser storage is disabled or unavailable.
+        }
       }
       return { isDarkMode: newMode };
     }),
@@ -230,9 +234,13 @@ export const useAppStore = create<AppState>((set, get) => ({
 
 // Initialize dark mode from localStorage on first load
 if (typeof window !== "undefined") {
-  const savedMode = localStorage.getItem("campuscred-dark-mode");
-  if (savedMode === "true") {
-    document.documentElement.classList.add("dark");
-    useAppStore.setState({ isDarkMode: true });
+  try {
+    const savedMode = localStorage.getItem("campuscred-dark-mode");
+    if (savedMode === "true") {
+      document.documentElement.classList.add("dark");
+      useAppStore.setState({ isDarkMode: true });
+    }
+  } catch {
+    // Private browsing or browser privacy policies may disable localStorage.
   }
 }

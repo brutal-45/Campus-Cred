@@ -1,7 +1,7 @@
 'use client'; 
 
 import React, { useState, useMemo } from 'react';
-import { useAppStore } from '@/store';
+import { useRouter } from 'next/navigation';
 import { CampusCredLogo } from '@/components/shared/CampusCredLogo';
 import { PasswordStrengthMeter } from '@/components/auth/PasswordStrengthMeter';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ function SuccessIcon() {
 }
 
 export function ResetPasswordPage() {
-  const { navigate } = useAppStore();
+  const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -108,7 +108,7 @@ export function ResetPasswordPage() {
         className="absolute top-4 left-4 z-20 animate-fade-in"
         style={{ animationDelay: '100ms' }}
       >
-        <BackButton onClick={() => navigate('login')} to="Login" />
+        <BackButton onClick={() => router.push('/login')} to="Login" />
       </div>
 
       <div className="w-full max-w-md relative z-10">
@@ -120,7 +120,7 @@ export function ResetPasswordPage() {
           >
             <div
               className="flex justify-center mb-3 cursor-pointer"
-              onClick={() => navigate('landing')}
+              onClick={() => router.push('/')}
             >
               <CampusCredLogo size={44} variant="white" animate={true} />
             </div>
@@ -149,7 +149,7 @@ export function ResetPasswordPage() {
                       No reset token found. Please request a new password reset link.
                     </p>
                     <button
-                      onClick={() => navigate('forgot-password')}
+                      onClick={() => router.push('/forgot-password')}
                       className="text-danger text-xs font-medium underline mt-1"
                     >
                       Request new link
@@ -262,7 +262,7 @@ export function ResetPasswordPage() {
                 </p>
 
                 <Button
-                  onClick={() => navigate('login')}
+                  onClick={() => router.push('/login')}
                   className="btn-primary text-white font-semibold h-11 px-8 rounded-xl text-sm"
                 >
                   Go to Login
@@ -275,7 +275,7 @@ export function ResetPasswordPage() {
           {!isSuccess && (
             <div className="text-center mt-4 animate-fade-in" style={{ animationDelay: '500ms' }}>
               <button
-                onClick={() => navigate('login')}
+                onClick={() => router.push('/login')}
                 className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-electric transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />

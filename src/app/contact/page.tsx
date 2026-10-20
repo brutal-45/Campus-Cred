@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import {
  Mail,
- Phone,
  MapPin,
  Send,
  MessageSquare,
@@ -47,7 +46,6 @@ const offices = [
 
 const contactMethods = [
  { icon: Mail, label: 'Email Us', value: 'creatorsports81@gmail.com', description: 'We reply within 24 hours', color: 'from-blue-500 to-cyan-500' },
- { icon: Phone, label: 'Call Us', value: '9096341850', description: 'Mon-Fri, 10am-6pm IST', color: 'from-emerald-500 to-green-500' },
  { icon: MessageSquare, label: 'Live Chat', value: 'Available on Platform', description: 'Instant support for students', color: 'from-violet-500 to-purple-500' },
 ];
 
@@ -105,7 +103,7 @@ export default function ContactPage() {
  {/* Contact Methods */}
  <section className="py-12">
  <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
- <div initial="hidden" animate="visible" className="grid md:grid-cols-3 gap-6">
+ <div initial="hidden" animate="visible" className="grid md:grid-cols-2 gap-6">
  {contactMethods.map((method) => (
  <div key={method.label}>
  <Card className="animate-fade-in p-6 text-center hover:shadow-lg transition-all hover:border-electric/30 group">

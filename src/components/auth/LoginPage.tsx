@@ -1,7 +1,8 @@
 'use client'; 
 
 import React, { useState } from 'react';
-import { useAppStore, User, type AppView } from '@/store';
+import { useAppStore, User } from '@/store';
+import { useRouter } from 'next/navigation';
 import { CampusCredLogo } from '@/components/shared/CampusCredLogo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,7 +63,21 @@ function LinkedInIcon({ className }: { className?: string }) {
 }
 
 export function LoginPage() {
-  const { setUser, setToken, setRefreshToken, setOauthUser, setOauthOnboarding, navigate } = useAppStore();
+  const {
+    setUser,
+    setToken,
+    setRefreshToken,
+    setOauthUser,
+    setOauthOnboarding,
+    navigate,
+  } = useAppStore();
+  const router = useRouter();
+  const goHome = () => {
+    // Reset the legacy view as well as the URL: LoginPage is rendered both at
+    // /login and as an in-memory view on the root route.
+    navigate('landing');
+    router.replace('/');
+  };
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -85,7 +100,7 @@ export function LoginPage() {
         body: JSON.stringify({ email, password, rememberMe }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
         toast.error(data.error || 'Login failed');
@@ -97,16 +112,17 @@ export function LoginPage() {
       if (data.refreshToken) setRefreshToken(data.refreshToken);
 
       // Route based on role
-      const roleRoutes: Record<string, AppView> = {
-        admin: 'admin',
-        company: 'company',
-        mentor: 'mentor',
-        college: 'college',
+      const roleRoutes: Record<string, string> = {
+        admin: '/admin',
+        company: '/company/dashboard',
+        mentor: '/mentor/dashboard',
+        college: '/college/dashboard',
       };
-      navigate(roleRoutes[data.user.role] || 'dashboard');
+      router.replace(roleRoutes[data.user.role] || '/app');
       toast.success(`Welcome back, ${data.user.fullName}!`);
-    } catch {
-      toast.error('Something went wrong. Please try again.');
+    } catch (error) {
+      console.error('Login request failed:', error);
+      toast.error('Unable to reach the login service. Check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -137,17 +153,17 @@ export function LoginPage() {
             avatar: ((data.user as Record<string, unknown>).profilePhoto as string) || null,
           });
           setOauthOnboarding(true);
-          navigate('onboarding');
+          router.push('/onboarding');
           toast.success(`Welcome, ${(data.user as Record<string, unknown>).fullName}! Let's set up your profile.`);
         } else {
           // Existing user — go straight to dashboard
-          const roleRoutes: Record<string, AppView> = {
-            admin: 'admin',
-            company: 'company',
-            mentor: 'mentor',
-            college: 'college',
+          const roleRoutes: Record<string, string> = {
+            admin: '/admin',
+            company: '/company/dashboard',
+            mentor: '/mentor/dashboard',
+            college: '/college/dashboard',
           };
-          navigate(roleRoutes[(data.user as Record<string, unknown>).role as string] || 'dashboard');
+          router.replace(roleRoutes[(data.user as Record<string, unknown>).role as string] || '/app');
           toast.success(`Welcome back, ${(data.user as Record<string, unknown>).fullName}!`);
         }
       } else {
@@ -168,16 +184,16 @@ export function LoginPage() {
             avatar: ((data.user as Record<string, unknown>).profilePhoto as string) || null,
           });
           setOauthOnboarding(true);
-          navigate('onboarding');
+          router.push('/onboarding');
           toast.success(`Welcome, ${(data.user as Record<string, unknown>).fullName}! Let's set up your profile.`);
         } else {
-          const roleRoutes: Record<string, AppView> = {
-            admin: 'admin',
-            company: 'company',
-            mentor: 'mentor',
-            college: 'college',
+          const roleRoutes: Record<string, string> = {
+            admin: '/admin',
+            company: '/company/dashboard',
+            mentor: '/mentor/dashboard',
+            college: '/college/dashboard',
           };
-          navigate(roleRoutes[(data.user as Record<string, unknown>).role as string] || 'dashboard');
+          router.replace(roleRoutes[(data.user as Record<string, unknown>).role as string] || '/app');
           toast.success(`Welcome back, ${(data.user as Record<string, unknown>).fullName}!`);
         }
       }
@@ -196,7 +212,7 @@ export function LoginPage() {
         className="absolute top-4 left-4 z-20 animate-fade-in"
         style={{ animationDelay: '100ms' }}
       >
-        <BackButton onClick={() => navigate('landing')} to="Home" />
+        <BackButton onClick={goHome} to="Home" />
       </div>
 
       {/* Dark mode toggle — top-right */}
@@ -216,7 +232,7 @@ export function LoginPage() {
           >
             <div
               className="flex justify-center mb-3 cursor-pointer"
-              onClick={() => navigate('landing')}
+              onClick={goHome}
             >
               <CampusCredLogo size={48} variant="white" animate={true} />
             </div>
@@ -307,7 +323,7 @@ export function LoginPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => navigate('forgot-password')}
+                  onClick={() => router.push('/forgot-password')}
                   className="text-xs text-electric hover:text-electric-dark transition-colors font-medium"
                 >
                   Forgot Password?
@@ -395,7 +411,7 @@ export function LoginPage() {
             <p className="text-center text-sm text-[#94A3B8] dark:text-white/40 mt-6">
               No account yet?{' '}
               <button
-                onClick={() => navigate('onboarding')}
+                onClick={() => router.push('/register')}
                 className="text-electric hover:text-electric-dark transition-colors font-semibold"
               >
                 Register

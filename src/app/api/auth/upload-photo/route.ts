@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
+import { uploadSupabaseObject } from '@/lib/supabase-storage';
 
 const isVercel = process.env.VERCEL === '1';
 
@@ -37,15 +38,12 @@ export async function POST(req: NextRequest) {
     const filename = `avatar_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
     if (isVercel) {
-      // On Vercel, filesystem is read-only except /tmp
-      // Return base64 data URL so the image is stored in the database
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const base64 = buffer.toString('base64');
-      const dataUrl = `data:${file.type};base64,${base64}`;
+      // Vercel's filesystem is ephemeral. Store uploaded photos durably in Supabase.
+      const bytes = Buffer.from(await file.arrayBuffer());
+      const url = await uploadSupabaseObject(`avatars/${filename}`, bytes, file.type);
 
       return NextResponse.json(
-        { url: dataUrl, message: 'Photo uploaded successfully' },
+        { url, message: 'Photo uploaded successfully' },
         { status: 200 }
       );
     } else {

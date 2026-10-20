@@ -21,8 +21,18 @@ import { useTokenRefresh } from '@/hooks/useTokenRefresh';
  *    degradation for serverless environments (Vercel) and sleeping servers (Render free tier).
  *    Prevents infinite loading loops during cold starts.
  */
+function clearStaleSessionIfAnonymous() {
+  // A successful login can race the initial anonymous refresh request. Never
+  // let that earlier 401 erase a session established while it was in flight.
+  const state = useAppStore.getState();
+  if (state.isAuthenticated) return;
+  state.setToken(null);
+  state.setRefreshToken(null);
+  state.setUser(null);
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { token, isAuthenticated, setToken, setUser, logout } = useAppStore();
+  const { token, isAuthenticated, setToken, setUser } = useAppStore();
   const [isRestoring, setIsRestoring] = useState(true);
   
   // Activate the silent auto-refresh mechanism
@@ -86,12 +96,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               // This is common in serverless environments
             }
           } else {
-            // No token returned – session is invalid
-            logout();
+            // No token returned. Clear stale client state without navigating;
+            // anonymous visitors are expected to have no refresh cookie.
+            clearStaleSessionIfAnonymous();
           }
         } else if (res.status === 401 || res.status === 403) {
-          // Refresh cookie is invalid/expired – clear any stale state
-          logout();
+          // A missing/expired refresh cookie is normal for logged-out visitors.
+          // Do not call logout(): it hard-navigates to `/` and causes a reload loop.
+          clearStaleSessionIfAnonymous();
         } else {
           // Server error or timeout - likely serverless cold start or sleeping server
           // Don't logout, just stop showing the loader and let user interact

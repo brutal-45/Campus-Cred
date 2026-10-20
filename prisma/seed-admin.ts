@@ -1,6 +1,6 @@
 /**
  * Seed script to create the admin user for CampusCred
- * Run with: npx ts-node prisma/seed-admin.ts
+ * Run with: npm run db:seed
  */
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
@@ -8,8 +8,11 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminEmail = 'creatorsports81@gmail.com';
-  const adminPassword = 'Viraj@133';
+  const adminEmail = (process.env.ADMIN_EMAIL || 'creatorsports81@gmail.com').trim().toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword) {
+    throw new Error('Set ADMIN_PASSWORD before running the admin seed script.');
+  }
   const passwordHash = await bcrypt.hash(adminPassword, 12);
 
   // Upsert admin user — create if not exists, update if exists

@@ -6,12 +6,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-// Create a single Prisma client instance for health checks
-const prisma = new PrismaClient({
-  log: [],
-});
+import { db } from "@/lib/db";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -21,8 +16,8 @@ export async function GET() {
   
   try {
     // Check database connectivity
-    await prisma.$connect();
-    await prisma.$queryRaw`SELECT 1`;
+    await db.$connect();
+    await db.$queryRaw`SELECT 1`;
     
     const responseTime = Date.now() - startTime;
     
@@ -54,16 +49,14 @@ export async function GET() {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
     });
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
 // Also support HEAD requests for lightweight health checks
 export async function HEAD() {
   try {
-    await prisma.$connect();
-    await prisma.$queryRaw`SELECT 1`;
+    await db.$connect();
+    await db.$queryRaw`SELECT 1`;
     
     return new NextResponse(null, {
       status: 200,
@@ -75,7 +68,5 @@ export async function HEAD() {
     return new NextResponse(null, {
       status: 503,
     });
-  } finally {
-    await prisma.$disconnect();
   }
 }

@@ -1,7 +1,7 @@
 'use client'; 
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAppStore } from '@/store';
+import { useRouter } from 'next/navigation';
 import { CampusCredLogo } from '@/components/shared/CampusCredLogo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,7 +34,7 @@ function MailIcon() {
 }
 
 export function ForgotPasswordPage() {
-  const { navigate } = useAppStore();
+  const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -110,7 +110,7 @@ export function ForgotPasswordPage() {
         className="absolute top-4 left-4 z-20 animate-fade-in"
         style={{ animationDelay: '100ms' }}
       >
-        <BackButton onClick={() => navigate('login')} to="Login" />
+        <BackButton onClick={() => router.push('/login')} to="Login" />
       </div>
 
       <div className="w-full max-w-md relative z-10">
@@ -122,7 +122,7 @@ export function ForgotPasswordPage() {
           >
             <div
               className="flex justify-center mb-3 cursor-pointer"
-              onClick={() => navigate('landing')}
+              onClick={() => router.push('/')}
             >
               <CampusCredLogo size={44} variant="white" animate={true} />
             </div>
@@ -183,7 +183,7 @@ export function ForgotPasswordPage() {
                 {/* Back to Login */}
                 <div className="mt-6 text-center">
                   <button
-                    onClick={() => navigate('login')}
+                    onClick={() => router.push('/login')}
                     className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-electric transition-colors"
                   >
                     <ArrowLeft className="w-4 h-4" />
@@ -234,7 +234,7 @@ export function ForgotPasswordPage() {
                 {/* Back to Login */}
                 <div className="mt-6">
                   <button
-                    onClick={() => navigate('login')}
+                    onClick={() => router.push('/login')}
                     className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-electric transition-colors"
                   >
                     <ArrowLeft className="w-4 h-4" />

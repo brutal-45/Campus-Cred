@@ -13,12 +13,10 @@
  * - Dev bypass: "123456" works in development mode
  */
 
-import { PrismaClient } from '@prisma/client';
+import { db } from './db';
 import { sendOtpSms, isValidIndianPhone, cleanPhone } from './sms';
 import { sendOtpEmail } from './email-service';
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
 
 // OTP configuration
 const OTP_CONFIG = {
@@ -83,7 +81,7 @@ export async function createAndSendOtp(
 
   // ─── Rate limit: max N requests per window ───
   const windowStart = new Date(Date.now() - config.windowMinutes * 60 * 1000);
-  const recentCount = await prisma.otpVerification.count({
+  const recentCount = await db.otpVerification.count({
     where: {
       target,
       type,
@@ -101,7 +99,7 @@ export async function createAndSendOtp(
   }
 
   // ─── Invalidate previous OTPs for this target+type+purpose ───
-  await prisma.otpVerification.deleteMany({
+  await db.otpVerification.deleteMany({
     where: {
       target,
       type,
@@ -115,7 +113,7 @@ export async function createAndSendOtp(
   const expiresAt = new Date(Date.now() + config.expiryMinutes * 60 * 1000);
 
   // ─── Store in database ───
-  await prisma.otpVerification.create({
+  await db.otpVerification.create({
     data: {
       target,
       type,
@@ -136,13 +134,20 @@ export async function createAndSendOtp(
     sendResult = await sendOtpEmail(target, otp, purpose);
   }
 
-  if (!sendResult.success && sendResult.provider !== 'console') {
-    // SMS/email failed (but not in dev mode) — still keep the OTP in DB for retry
-    console.warn(`[OTP] Delivery via ${sendResult.provider} failed: ${sendResult.error}`);
+  if (!sendResult.success) {
+    // Never claim delivery succeeded when a production provider is misconfigured.
+    await db.otpVerification.deleteMany({
+      where: { target, type, purpose, isVerified: false },
+    });
+    return {
+      success: false,
+      expiresIn: 0,
+      error: sendResult.error || 'Could not deliver the verification code. Please try again later.',
+    };
   }
 
   // ─── Cleanup expired OTPs (housekeeping) ───
-  prisma.otpVerification.deleteMany({
+  db.otpVerification.deleteMany({
     where: { expiresAt: { lt: new Date() } },
   }).catch(() => {}); // Fire and forget
 
@@ -183,7 +188,7 @@ export async function verifyOtp(
   if (process.env.NODE_ENV === 'development' && otp === '123456') {
     console.log(`[OTP-DEV] Bypass verification for ${type}: ${type === 'phone' ? `+91 ${target.slice(0, 2)}*** ***${target.slice(8)}` : maskEmail(target)}`);
     // Mark as verified in DB too
-    await prisma.otpVerification.updateMany({
+    await db.otpVerification.updateMany({
       where: { target, type, purpose, isVerified: false },
       data: { isVerified: true },
     });
@@ -191,7 +196,7 @@ export async function verifyOtp(
   }
 
   // ─── Find active OTP record ───
-  const record = await prisma.otpVerification.findFirst({
+  const record = await db.otpVerification.findFirst({
     where: {
       target,
       type,
@@ -211,7 +216,7 @@ export async function verifyOtp(
 
   // ─── Check max attempts ───
   if (record.attempts >= record.maxAttempts) {
-    await prisma.otpVerification.delete({ where: { id: record.id } });
+    await db.otpVerification.delete({ where: { id: record.id } });
     return {
       verified: false,
       error: 'Too many incorrect attempts. Please request a new OTP.',
@@ -219,7 +224,7 @@ export async function verifyOtp(
   }
 
   // ─── Increment attempt counter ───
-  await prisma.otpVerification.update({
+  await db.otpVerification.update({
     where: { id: record.id },
     data: { attempts: { increment: 1 } },
   });
@@ -234,7 +239,7 @@ export async function verifyOtp(
   }
 
   // ─── Mark as verified ───
-  await prisma.otpVerification.update({
+  await db.otpVerification.update({
     where: { id: record.id },
     data: { isVerified: true },
   });

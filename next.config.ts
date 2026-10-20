@@ -1,13 +1,16 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Enable standalone output for Docker deployments (Render, etc.)
-  output: 'standalone',
+  // Allow Arena's proxied development preview host to load HMR/dev assets.
+  allowedDevOrigins: ['*.e2b.app'],
+  // Let Vercel package App Router routes as serverless/edge functions itself.
+  // `output: 'standalone'` is intended for custom Docker/server deployments.
+  // The legacy UI currently has existing TypeScript errors; don't let those
+  // block deployment, while keeping `npm run lint` as the quality gate.
   typescript: {
     ignoreBuildErrors: true,
   },
-  reactStrictMode: false,
-  turbopack: {},
+  reactStrictMode: true,
   images: {
     unoptimized: false,
     remotePatterns: [
@@ -23,8 +26,6 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '2mb',
     },
-    // Optimize for serverless environments (Vercel)
-    serverComponents: true,
   },
   // Prevent hydration errors during session restoration
   compiler: {

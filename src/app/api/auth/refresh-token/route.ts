@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 import { verifyRefreshToken, generateAccessToken } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
@@ -28,6 +27,15 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json(
+        { error: 'Session service is not configured. Add the Supabase DATABASE_URL.' },
+        { status: 503 }
+      );
+    }
+
+    const { db } = await import('@/lib/db');
 
     // Find session by refresh token that hasn't expired
     const session = await db.session.findFirst({
