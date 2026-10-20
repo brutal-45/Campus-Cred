@@ -19,7 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CampusCredLogo } from '@/components/shared/CampusCredLogo';
 import { ScoreRing } from '@/components/dashboard/LevelBadge';
 import { LEVEL_THRESHOLDS, PLATFORM_DOMAIN } from '@/lib/constants';
-import { getLevelForScore } from '@/lib/score-service';
+import { getLevelForScore } from '@/lib/score-level';
 import { toast } from 'sonner';
 
 interface PortfolioData {

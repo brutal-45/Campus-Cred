@@ -195,6 +195,14 @@ async function sendViaSmtp(options: EmailOptions): Promise<EmailResult> {
  * Console — Development/testing mode, logs email to console
  */
 async function sendViaConsole(options: EmailOptions): Promise<EmailResult> {
+  if (process.env.NODE_ENV === 'production') {
+    return {
+      success: false,
+      error: 'Console email delivery is disabled in production. Configure Resend or SMTP.',
+      provider: 'console',
+    };
+  }
+
   console.log(`\n${'='.repeat(60)}`);
   console.log(`[EMAIL-CONSOLE] To: ${maskEmail(options.to)}`);
   console.log(`   Subject: ${options.subject}`);

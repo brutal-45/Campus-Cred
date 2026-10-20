@@ -3,6 +3,7 @@ import { Inter, Poppins, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { AuthProvider } from "@/providers/AuthProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -56,7 +57,7 @@ export default function RootLayout({
         className={`${inter.variable} ${poppins.variable} ${playfair.variable} font-sans antialiased bg-background text-foreground`}
       >
         <QueryProvider>
-          {children}
+          <AuthProvider>{children}</AuthProvider>
           <Toaster position="top-right" richColors />
         </QueryProvider>
       </body>

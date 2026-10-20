@@ -93,7 +93,8 @@ The platform serves four user roles: **Students**, **Companies**, **Colleges**, 
 | **Language** | [TypeScript](https://www.typescriptlang.org/) | 5 |
 | **Styling** | [Tailwind CSS](https://tailwindcss.com/) | 4 |
 | **UI Library** | [shadcn/ui](https://ui.shadcn.com/) (new-york style) | 45 components |
-| **Database** | [SQLite](https://www.sqlite.org/) | Via Prisma |
+| **Database** | [Supabase PostgreSQL](https://supabase.com/database) | Via Prisma |
+| **File storage** | [Supabase Storage](https://supabase.com/storage) | Profile photos + certificates |
 | **ORM** | [Prisma](https://www.prisma.io/) | 6 |
 | **Authentication** | Custom JWT + bcryptjs | — |
 | **State Management** | [Zustand](https://zustand.docs.pmnd.rs/) | 5 |
@@ -114,70 +115,44 @@ The platform serves four user roles: **Students**, **Companies**, **Colleges**, 
 
 ### Prerequisites
 
-- **Node.js** 18+ or **Bun** 1.0+
+- **Node.js** 20.9+ (required by Next.js 16)
 - **npm** or **bun** package manager
 
-### 1. Clone the Repository
+### 1. Clone and install
 
 ```bash
 git clone https://github.com/brutal-45/Campus-Cred.git
-cd campuscred
-```
-
-### 2. Install Dependencies
-
-```bash
+cd Campus-Cred
 npm install
 ```
 
-### 3. Configure Environment Variables
+### 2. Create a Supabase project
+
+Create a project at [supabase.com](https://supabase.com), then copy its PostgreSQL connection strings from **Project Settings → Database → Connection string**. Use the pooler URL for `DATABASE_URL` and the direct connection URL for `DIRECT_URL`.
+
+Create a **public** Storage bucket named `campuscred-assets` (or use a different name and set `SUPABASE_STORAGE_BUCKET`). The app uses it for profile photos and generated certificate files. Keep the service-role key private and only set it as a server-side environment variable.
+
+### 3. Configure the app
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` with your configuration:
+Fill in both Supabase database URLs, the project URL and service-role key, and unique random values for `JWT_SECRET`, `JWT_REFRESH_SECRET`, and `CERT_SECRET`. Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` for the administrator account. Do not commit `.env` or expose the service-role key through a `NEXT_PUBLIC_` variable.
 
-```env
-# Database (SQLite — relative path for portability)
-DATABASE_URL=file:./db/custom.db
-
-# JWT Secrets (CHANGE IN PRODUCTION!)
-JWT_SECRET=your-jwt-secret-key
-JWT_REFRESH_SECRET=your-refresh-secret-key
-
-# SMS Provider: "msg91" | "twilio" | "console"
-SMS_PROVIDER=console
-
-# Email Provider: "smtp" | "console"
-EMAIL_PROVIDER=console
-
-# OAuth (optional)
-NEXT_PUBLIC_GOOGLE_CLIENT_ID=
-NEXT_PUBLIC_GITHUB_CLIENT_ID=
-NEXT_PUBLIC_LINKEDIN_CLIENT_ID=
-```
-
-### 4. Initialize Database
+### 4. Initialize Supabase and start locally
 
 ```bash
-# Generate Prisma client
-npx prisma generate
-
-# Push schema to database
-npx prisma db push
-```
-
-### 5. Start Development Server
-
-```bash
+npm run db:generate
+npm run db:push
 npm run dev
 ```
 
-Open [http://localhost:3000](campus-cred.onrender.com) in your browser.
+`db:push` creates/updates the Prisma tables in your Supabase database. Database schema changes are intentionally **not** pushed automatically during deploy. Open [http://localhost:3000](http://localhost:3000) to use the app.
 
+To create the first administrator, run `npm run db:seed` from a trusted environment after configuring `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
 
-> **Note:** Admin registration is locked — no other email can register or login as admin.
+> **Note:** Admin accounts are not created during login. The public `/api/seed` endpoint is disabled; seed an admin from the command line only.
 
 ---
 
@@ -302,79 +277,45 @@ campuscred/
 
 ## Deployment
 
-### Production Build
+### Vercel + Supabase (recommended)
+
+1. Create a Supabase project and a **public** Storage bucket (`campuscred-assets`).
+2. Add the variables from `.env.example` to **Vercel → Project Settings → Environment Variables** for Production, Preview, and Development as appropriate:
+   - `DATABASE_URL`: Supabase pooled PostgreSQL connection string. For the transaction pooler (port `6543`), include `?pgbouncer=true`.
+   - `DIRECT_URL`: Supabase direct PostgreSQL connection string (used by Prisma for schema changes). If Vercel cannot reach the project's direct IPv6 endpoint, use the Supabase **session pooler** URL (port `5432`) for this variable; don't use the transaction pooler for schema changes.
+   - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`: Storage configuration. Never prefix the service-role key with `NEXT_PUBLIC_`.
+   - `JWT_SECRET`, `JWT_REFRESH_SECRET`, and `CERT_SECRET`: independent random secrets (at least 32 characters); never use the development example values.
+   - `ADMIN_EMAIL`, `ADMIN_PASSWORD`: administrator credentials, set privately.
+   - `NEXT_PUBLIC_APP_URL`: your deployed site origin, such as `https://your-project.vercel.app`.
+3. Before the first deployment, apply the database schema from a trusted machine with the Supabase variables configured: `npm run db:push`. The Vercel build deliberately does not alter or reset your database.
+4. Import the repository in Vercel and deploy. The project uses the standard Next.js build and Vercel's App Router/serverless support; no custom server or standalone output is required.
+
+The first administrator must be created from a trusted CLI environment after setting `ADMIN_EMAIL` and `ADMIN_PASSWORD`; the public `/api/seed` route is disabled. The Vercel function duration is configured to allow longer database and certificate operations. Generated profile photos and certificates are stored in Supabase Storage because Vercel's function filesystem is temporary.
+
+### Local production build
 
 ```bash
-# Build the standalone application
 npm run build
-
-# The build script automatically copies:
-# - .next/static → .next/standalone/.next/static
-# - public/ → .next/standalone/public/
-# - db/ → .next/standalone/db/
-# - prisma/ → .next/standalone/prisma/
-# - .env → .next/standalone/.env
-```
-
-### Start Production Server
-
-```bash
-# Using Bun (recommended)
 npm run start
-
-# Or using Node.js
-cd .next/standalone && node server.js
 ```
 
-### Docker Deployment
-
-```dockerfile
-FROM node:18-alpine AS base
-
-FROM base AS deps
-WORKDIR /app
-COPY .next/standalone/package.json ./
-RUN npm install --omit=dev
-
-FROM base AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-
-COPY --from=deps /app/node_modules ./node_modules
-COPY .next/standalone/ ./
-
-EXPOSE 3000
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
-CMD ["node", "server.js"]
-```
-
-### Vercel Deployment
-
-```bash
-# Remove "output: standalone" from next.config.ts for Vercel
-npx vercel
-```
-
-### Environment Variables for Production
+### Environment variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABASE_URL` | Yes | SQLite path: `file:./db/custom.db` |
-| `JWT_SECRET` | Yes | Access token signing secret |
-| `JWT_REFRESH_SECRET` | Yes | Refresh token signing secret |
-| `SMS_PROVIDER` | No | `msg91`, `twilio`, or `console` (default) |
-| `MSG91_AUTH_KEY` | If MSG91 | MSG91 API key |
-| `TWILIO_ACCOUNT_SID` | If Twilio | Twilio Account SID |
-| `TWILIO_AUTH_TOKEN` | If Twilio | Twilio Auth Token |
-| `EMAIL_PROVIDER` | No | `smtp` or `console` (default) |
-| `SMTP_HOST` | If SMTP | SMTP server hostname |
-| `SMTP_USER` | If SMTP | SMTP username |
-| `SMTP_PASS` | If SMTP | SMTP password |
-| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | No | Google OAuth Client ID |
-| `NEXT_PUBLIC_GITHUB_CLIENT_ID` | No | GitHub OAuth Client ID |
-| `NEXT_PUBLIC_LINKEDIN_CLIENT_ID` | No | LinkedIn OAuth Client ID |
+| `DATABASE_URL` | Yes | Supabase pooled PostgreSQL URL for app traffic |
+| `DIRECT_URL` | Yes | Supabase direct PostgreSQL URL for Prisma schema changes |
+| `SUPABASE_URL` | Yes on Vercel | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes on Vercel | Server-only Supabase Storage key |
+| `SUPABASE_STORAGE_BUCKET` | Yes on Vercel | Public Storage bucket (default `campuscred-assets`) |
+| `JWT_SECRET` | Yes in production | Access token signing secret |
+| `JWT_REFRESH_SECRET` | Yes in production | Refresh token signing secret |
+| `CERT_SECRET` | Yes in production | Certificate integrity secret |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | For admin seed | Private administrator credentials |
+| `NEXT_PUBLIC_APP_URL` | Recommended | Public origin used in generated links |
+| `EMAIL_PROVIDER` | Yes for production OTP delivery | Set to `resend` or `smtp`; production will not return OTPs from the console provider |
+| `RESEND_API_KEY` / SMTP variables | If using that email provider | Configure a real email delivery provider for verification and password reset |
+| `SMS_PROVIDER` | Optional | `msg91`, `twilio`, or `console`; configure provider credentials if phone OTP delivery is needed |
 
 ---
 
@@ -477,6 +418,6 @@ Proprietary — All rights reserved. Developed under **BrutalTools**.
 
 **CampusCred** — Earn Real Work. Gain Real Cred.
 
-[📧 creatorsports81@gmail.com](mailto:creatorsports81@gmail.com) · [📞 9096341850](tel:9096341850) · [📍 Maharashtra, Pune, Mumbai]
+[📧 creatorsports81@gmail.com](mailto:creatorsports81@gmail.com) · [📍 Maharashtra, Pune, Mumbai]
 
 </div>

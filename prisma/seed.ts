@@ -4,15 +4,20 @@ import { hashPassword } from '@/lib/auth';
 async function main() {
   console.log('🌱 Seeding database...');
 
-  // Create admin user — ONLY allowed admin: creatorsports81@gmail.com
-  const adminPassword = await hashPassword('Viraj@133');
+  // Admin credentials are supplied privately through deployment environment variables.
+  const adminEmail = (process.env.ADMIN_EMAIL || 'creatorsports81@gmail.com').trim().toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword) {
+    throw new Error('Set ADMIN_PASSWORD before running the seed script.');
+  }
+  const passwordHash = await hashPassword(adminPassword);
   const admin = await db.user.upsert({
-    where: { email: 'creatorsports81@gmail.com' },
+    where: { email: adminEmail },
     update: {},
     create: {
       fullName: 'Admin CampusCred',
-      email: 'creatorsports81@gmail.com',
-      passwordHash: adminPassword,
+      email: adminEmail,
+      passwordHash,
       role: 'admin',
       isVerified: true,
       points: 0,
@@ -22,7 +27,7 @@ async function main() {
   });
 
   console.log('✅ Seed data created successfully!');
-  console.log(`   - Admin: creatorsports81@gmail.com / Viraj@133`);
+  console.log(`   - Admin account: ${admin.email}`);
 }
 
 main()

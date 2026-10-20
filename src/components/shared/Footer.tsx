@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Mail, Phone, Twitter, Linkedin, Instagram, MapPin, Youtube } from 'lucide-react';
+import { Mail, Twitter, Linkedin, Instagram, MapPin, Youtube } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { CampusCredLogo } from './CampusCredLogo';
 import { useAppStore } from '@/store';
@@ -175,15 +175,6 @@ export function Footer() {
                 >
                   <Mail className="h-4 w-4 shrink-0" />
                   creatorsports81@gmail.com
-                </a>
-              </li>
-              <li>
-                <a
-                  href="tel:9096341850"
-                  className="flex items-center gap-2.5 text-sm text-white/60 transition-colors hover:text-electric-light"
-                >
-                  <Phone className="h-4 w-4 shrink-0" />
-                  9096341850
                 </a>
               </li>
               <li>

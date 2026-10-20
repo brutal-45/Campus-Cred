@@ -207,7 +207,6 @@ campuscred/
 
 For issues or questions:
 - Email: creatorsports81@gmail.com
-- Phone: 9096341850
 
 ---
 

@@ -2,6 +2,7 @@
  * Custom server for Render deployment
  * Handles graceful startup and keeps the server responsive
  */
+/* eslint-disable @typescript-eslint/no-require-imports */
 
 const { createServer } = require('http');
 const { parse } = require('url');

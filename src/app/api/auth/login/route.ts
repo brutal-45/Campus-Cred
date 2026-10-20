@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { comparePassword, hashPassword, generateAccessToken, generateRefreshToken } from '@/lib/auth';
+import { comparePassword, generateAccessToken, generateRefreshToken } from '@/lib/auth';
 
 // ─── Admin Configuration ───
-const ADMIN_EMAIL = 'creatorsports81@gmail.com';
-const ADMIN_PASSWORD = 'Viraj@133';
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'creatorsports81@gmail.com').toLowerCase();
 
 function parseDeviceInfo(userAgent: string | null): { deviceName: string; deviceInfo: string } {
   if (!userAgent) return { deviceName: 'Unknown Device', deviceInfo: 'Unknown' };
@@ -47,34 +45,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json(
+        { error: 'Login is not configured yet. Add your Supabase DATABASE_URL in the app environment.' },
+        { status: 503 }
+      );
+    }
+
+    // Import Prisma inside the handler so a missing generated client or database
+    // configuration returns a useful API response instead of a blank 500 page.
+    const { db } = await import('@/lib/db');
+
     // Find user by email
     let user = await db.user.findUnique({
       where: { email: email.toLowerCase() },
     });
-
-    // ─── Admin Auto-Create: If admin email doesn't exist, create it ───
-    if (!user && email.toLowerCase() === ADMIN_EMAIL) {
-      if (password === ADMIN_PASSWORD) {
-        const passwordHash = await hashPassword(ADMIN_PASSWORD);
-        user = await db.user.create({
-          data: {
-            fullName: 'Admin',
-            email: ADMIN_EMAIL,
-            passwordHash,
-            role: 'admin',
-            isVerified: true,
-            level: 'Legend',
-            points: 999,
-            campusCredScore: 1000,
-          },
-        });
-      } else {
-        return NextResponse.json(
-          { error: 'Invalid email or password' },
-          { status: 401 }
-        );
-      }
-    }
 
     if (!user) {
       return NextResponse.json(
@@ -83,7 +68,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ─── Admin Lock: Only creatorsports81@gmail.com can login as admin ───
+    // ─── Admin Lock: only the configured administrator account may use this role ───
     if (user.role === 'admin' && user.email !== ADMIN_EMAIL) {
       return NextResponse.json(
         { error: 'Access denied. Admin login is restricted.' },
@@ -91,38 +76,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ─── Admin Direct Login: Allow admin with hardcoded password ───
-    if (user.email === ADMIN_EMAIL && user.role === 'admin') {
-      // For admin, verify against the configured password
-      if (password !== ADMIN_PASSWORD) {
-        return NextResponse.json(
-          { error: 'Invalid email or password' },
-          { status: 401 }
-        );
-      }
-      // Admin authenticated — skip bcrypt check, proceed to token generation below
-    } else {
-      const isPasswordValid = await comparePassword(password, user.passwordHash);
-      if (!isPasswordValid) {
-        // Log failed login attempt
-        const userAgent = req.headers.get('user-agent');
-        const { deviceName } = parseDeviceInfo(userAgent);
-        const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || null;
+    const isPasswordValid = await comparePassword(password, user.passwordHash);
+    if (!isPasswordValid) {
+      // Log failed login attempt
+      const userAgent = req.headers.get('user-agent');
+      const { deviceName } = parseDeviceInfo(userAgent);
+      const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || null;
 
-        await db.loginHistory.create({
-          data: {
-            userId: user.id,
-            ipAddress: ipAddress?.split(',')[0]?.trim() || null,
-            device: deviceName,
-            success: false,
-          },
-        });
+      await db.loginHistory.create({
+        data: {
+          userId: user.id,
+          ipAddress: ipAddress?.split(',')[0]?.trim() || null,
+          device: deviceName,
+          success: false,
+        },
+      });
 
-        return NextResponse.json(
-          { error: 'Invalid email or password' },
-          { status: 401 }
-        );
-      }
+      return NextResponse.json(
+        { error: 'Invalid email or password' },
+        { status: 401 }
+      );
     }
 
     // Generate tokens
@@ -218,9 +191,16 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error) {
     console.error('Login error:', error);
+    const detail = error instanceof Error ? error.message : String(error);
+    const databaseUnavailable = /PrismaClientInitializationError|P1001|P1003|DATABASE_URL|\.prisma\/client|Can't reach database/i.test(detail);
+
     return NextResponse.json(
-      { error: 'Something went wrong. Please try again.' },
-      { status: 500 }
+      {
+        error: databaseUnavailable
+          ? 'Cannot connect to Supabase yet. Check DATABASE_URL and run Prisma generate/db:push.'
+          : 'Login could not be completed. Please try again or contact support.',
+      },
+      { status: databaseUnavailable ? 503 : 500 }
     );
   }
 }

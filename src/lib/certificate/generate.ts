@@ -18,6 +18,7 @@ import QRCode from 'qrcode';
 import sharp from 'sharp';
 import { generateCertificateHtml, type CertificateData } from './template';
 import { generateAndSaveAvatar } from './avatar';
+import { isSupabaseStorageConfigured, uploadSupabaseObject } from '@/lib/supabase-storage';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -75,7 +76,9 @@ export function generateCertificateHash(
   issuedDate: string,
   studentName: string
 ): string {
-  const secret = process.env.CERT_SECRET || 'campuscred-cert-secret-2024';
+  const secret = process.env.CERT_SECRET || (process.env.NODE_ENV === 'production'
+    ? (() => { throw new Error('CERT_SECRET must be configured in production.'); })()
+    : 'local-development-only-certificate-secret');
   const data = `${certificateId}-${studentId}-${taskId}-${issuedDate}-${studentName}`;
   return crypto.createHash('sha256').update(data + secret).digest('hex');
 }
@@ -337,10 +340,20 @@ export async function generateCertificate(
   );
   console.log('[Certificate] Hash generated');
 
-  // Step 8: Build URLs
-  const pngUrl = `/certificates/${input.certificateId}.png`;
-  const pdfUrl = `/certificates/${input.certificateId}.pdf`;
-  const thumbnailUrl = `/certificates/${input.certificateId}_thumb.webp`;
+  // Step 8: Persist files durably on Vercel. The function's /tmp directory is
+  // discarded after each invocation, so certificate links must point to Storage.
+  let pngUrl = `/certificates/${input.certificateId}.png`;
+  let pdfUrl = `/certificates/${input.certificateId}.pdf`;
+  let thumbnailUrl = `/certificates/${input.certificateId}_thumb.webp`;
+
+  if (isVercel || isSupabaseStorageConfigured()) {
+    const prefix = `certificates/${input.certificateId}`;
+    [pngUrl, pdfUrl, thumbnailUrl] = await Promise.all([
+      uploadSupabaseObject(`${prefix}.png`, fs.readFileSync(pngPath), 'image/png'),
+      uploadSupabaseObject(`${prefix}.pdf`, fs.readFileSync(pdfPath), 'application/pdf'),
+      uploadSupabaseObject(`${prefix}_thumb.webp`, fs.readFileSync(thumbnailPath), 'image/webp'),
+    ]);
+  }
 
   return {
     certificateId: input.certificateId,

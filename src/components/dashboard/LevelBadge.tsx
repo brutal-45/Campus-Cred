@@ -3,7 +3,7 @@
 import React from 'react';
 import { Progress } from '@/components/ui/progress';
 import { LEVEL_THRESHOLDS } from '@/lib/constants';
-import { getLevelForScore } from '@/lib/score-service';
+import { getLevelForScore } from '@/lib/score-level';
 
 interface LevelBadgeProps {
   level: string;

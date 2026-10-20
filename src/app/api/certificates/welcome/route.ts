@@ -76,7 +76,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate hash for tamper-proofing
-    const secret = process.env.CERT_SECRET || 'campuscred-cert-secret-2024';
+    const secret = process.env.CERT_SECRET || (process.env.NODE_ENV === 'production'
+      ? (() => { throw new Error('CERT_SECRET must be configured in production.'); })()
+      : 'local-development-only-certificate-secret');
     const issuedDate = new Date().toISOString();
     const hashData = `${certificateId}-${student.id}-welcome-${issuedDate}-${student.fullName}`;
     const hash = crypto.createHash('sha256').update(hashData + secret).digest('hex');

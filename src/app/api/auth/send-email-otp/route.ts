@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAndSendOtp } from '@/lib/otp-service';
+import { db } from '@/lib/db';
 
 /**
  * POST /api/auth/send-email-otp
@@ -36,7 +37,13 @@ export async function POST(req: NextRequest) {
     if (!result.success) {
       return NextResponse.json(
         { error: result.error },
-        { status: result.error?.includes('Too many') ? 429 : 400 }
+        {
+          status: result.error?.includes('Too many')
+            ? 429
+            : result.error?.includes('disabled in production')
+              ? 503
+              : 400,
+        }
       );
     }
 
@@ -44,7 +51,8 @@ export async function POST(req: NextRequest) {
     // - Always return OTP in development mode
     // - Return OTP when EMAIL_PROVIDER=console (emails aren't actually sent, user needs to see OTP)
     const emailProvider = process.env.EMAIL_PROVIDER || 'console';
-    const shouldReturnOtp = process.env.NODE_ENV === 'development' || emailProvider === 'console';
+    const shouldReturnOtp = process.env.NODE_ENV !== 'production' &&
+      (process.env.NODE_ENV === 'development' || emailProvider === 'console');
 
     return NextResponse.json(
       {
@@ -75,9 +83,7 @@ export async function POST(req: NextRequest) {
  */
 async function getLatestOtp(target: string, type: string, purpose: string): Promise<string | null> {
   try {
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
-    const record = await prisma.otpVerification.findFirst({
+    const record = await db.otpVerification.findFirst({
       where: { target, type, purpose, isVerified: false },
       orderBy: { createdAt: 'desc' },
       select: { otp: true },

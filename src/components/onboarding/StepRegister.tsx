@@ -19,6 +19,7 @@ import {
   Phone,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
+import { useRouter } from 'next/navigation';
 import { PLATFORM_NAME } from '@/lib/constants';
 import { toast } from 'sonner';
 import { PasswordStrengthMeter } from '@/components/auth/PasswordStrengthMeter';
@@ -31,7 +32,8 @@ interface StepRegisterProps {
 type EmailStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
 
 export function StepRegister({ onNext }: StepRegisterProps) {
-  const { setUser, setToken, navigate } = useAppStore();
+  const { setUser, setToken } = useAppStore();
+  const router = useRouter();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -505,7 +507,7 @@ export function StepRegister({ onNext }: StepRegisterProps) {
           Already have an account?{' '}
           <button
             type="button"
-            onClick={() => navigate('login')}
+            onClick={() => router.push('/login')}
             className="text-electric hover:text-blue-300 font-medium transition-colors underline underline-offset-2"
           >
             Sign in
