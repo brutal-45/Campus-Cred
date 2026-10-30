@@ -17,7 +17,7 @@ export default function InternshipsRoute() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/internships', { headers: { Authorization: `Bearer ${token}` } })
+    fetch('/api/student/internships', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json()).then(d => { setInternships(d.internships || []); setLoading(false); }).catch(() => setLoading(false));
   }, [token]);
 

@@ -66,7 +66,6 @@ export function StreakTracker({ streakDays }: StreakTrackerProps) {
               style={{
                 backgroundColor: day.isActive ? '#F97316' : 'transparent',
                 border: day.isActive ? 'none' : '1px solid #E2E8F0',
-                ringOffsetColor: '#FFFFFF',
               }}
             >
               {day.isActive && (

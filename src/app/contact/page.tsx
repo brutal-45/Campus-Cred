@@ -103,7 +103,7 @@ export default function ContactPage() {
  {/* Contact Methods */}
  <section className="py-12">
  <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
- <div initial="hidden" animate="visible" className="grid md:grid-cols-2 gap-6">
+ <div className="grid md:grid-cols-2 gap-6">
  {contactMethods.map((method) => (
  <div key={method.label}>
  <Card className="animate-fade-in p-6 text-center hover:shadow-lg transition-all hover:border-electric/30 group">

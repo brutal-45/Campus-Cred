@@ -10,6 +10,8 @@ import {
   Calendar, Target, Gift, Lock, ChevronRight, Sparkles, Timer,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+import { useAppStore } from '@/store';
 
 interface Challenge {
   id: string; title: string; description: string; category: string; difficulty: 'Easy' | 'Medium' | 'Hard';
@@ -17,28 +19,54 @@ interface Challenge {
 }
 
 export default function ChallengesPage() {
-  const [streak, setStreak] = React.useState(7);
+  const { token, user } = useAppStore();
+  const router = useRouter();
+  const [streak, setStreak] = React.useState(0);
   const [activeChallenge, setActiveChallenge] = React.useState<Challenge | null>(null);
   const [timeLeft, setTimeLeft] = React.useState(0);
   const [isTimerRunning, setIsTimerRunning] = React.useState(false);
-  const [completedToday, setCompletedToday] = React.useState(1);
-  const [totalPoints, setTotalPoints] = React.useState(245);
+  const [completedToday, setCompletedToday] = React.useState(0);
+  const [totalPoints, setTotalPoints] = React.useState(0);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  const dailyChallenges: Challenge[] = [
-    { id: '1', title: 'Build a Responsive Navbar', description: 'Create a fully responsive navigation bar with mobile hamburger menu, dropdown, and smooth animations using React and Tailwind CSS.', category: 'Development', difficulty: 'Easy', points: 50, timeLimit: 1800, completed: false, xpReward: 30 },
-    { id: '2', title: 'API Error Handling', description: 'Implement comprehensive error handling for a REST API including 404, 500, rate limiting, and proper error response format.', category: 'Development', difficulty: 'Medium', points: 80, timeLimit: 3600, completed: false, xpReward: 50 },
-    { id: '3', title: 'Design a Landing Page', description: 'Create a visually stunning landing page with hero section, features grid, testimonials, and CTA. Focus on typography and spacing.', category: 'Design', difficulty: 'Medium', points: 70, timeLimit: 2700, completed: false, xpReward: 45 },
-    { id: '4', title: 'Write Technical Blog Post', description: 'Write a 500-word technical blog post explaining a complex concept in simple terms. Include code examples and diagrams.', category: 'Writing', difficulty: 'Easy', points: 40, timeLimit: 2400, completed: true, xpReward: 25 },
-    { id: '5', title: 'Database Schema Design', description: 'Design a normalized database schema for an e-commerce platform with users, products, orders, and reviews tables.', category: 'Data', difficulty: 'Hard', points: 100, timeLimit: 5400, completed: false, xpReward: 70 },
-  ];
-
-  const [challenges, setChallenges] = React.useState<Challenge[]>(dailyChallenges);
+  const [challenges, setChallenges] = React.useState<Challenge[]>([]);
 
   React.useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
+    setStreak(user?.streakDays || 0);
+    setTotalPoints(user?.points || 0);
+  }, [user]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [challengeRes, submissionRes] = await Promise.all([
+          fetch('/api/daily-challenges').then(r => (r.ok ? r.json() : { challenges: [] })).catch(() => ({ challenges: [] })),
+          token
+            ? fetch('/api/student/submissions', { headers: { Authorization: `Bearer ${token}` } }).then(r => (r.ok ? r.json() : { submissions: [] })).catch(() => ({ submissions: [] }))
+            : Promise.resolve({ submissions: [] }),
+        ]);
+        if (cancelled) return;
+        const submittedTaskIds = new Set<string>((submissionRes.submissions || []).map((sub: { taskId: string }) => sub.taskId));
+        const mapped: Challenge[] = (challengeRes.challenges || []).map((c: Record<string, unknown>) => ({
+          id: String(c.id),
+          title: String(c.title),
+          description: String(c.description || ''),
+          category: String(c.category || 'General'),
+          difficulty: (['Easy', 'Medium', 'Hard'].includes(String(c.difficulty)) ? c.difficulty : 'Medium') as Challenge['difficulty'],
+          points: Number(c.points || 0),
+          timeLimit: Number(c.timeLimit || 3600),
+          completed: submittedTaskIds.has(String(c.id)),
+          xpReward: Number(c.xpReward ?? c.points ?? 0),
+        }));
+        setChallenges(mapped);
+        setCompletedToday(mapped.filter(c => c.completed).length);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [token]);
 
   React.useEffect(() => {
     if (!isTimerRunning || timeLeft <= 0) return;
@@ -64,12 +92,11 @@ export default function ChallengesPage() {
 
   const completeChallenge = () => {
     if (!activeChallenge) return;
-    setChallenges(challenges.map(c => c.id === activeChallenge.id ? { ...c, completed: true } : c));
-    setCompletedToday(prev => prev + 1);
-    setTotalPoints(prev => prev + activeChallenge.points);
-    setStreak(prev => prev + 1);
+    // Challenges are real tasks — completing one means submitting your work
+    // for review on the task page (points are awarded on approval).
     setIsTimerRunning(false);
-    toast.success(`+${activeChallenge.points} points! Challenge completed! 🎉`);
+    toast.info('Submit your work to complete this challenge');
+    router.push(`/dashboard/tasks/${activeChallenge.id}`);
     setActiveChallenge(null);
     setTimeLeft(0);
   };
@@ -117,7 +144,7 @@ export default function ChallengesPage() {
           { label: 'Current Streak', value: streak, icon: Flame, color: 'text-orange-500', suffix: 'days' },
           { label: 'Completed Today', value: completedToday, icon: CheckCircle, color: 'text-green-500', suffix: '/3' },
           { label: 'Total Points', value: totalPoints, icon: Star, color: 'text-amber-500', suffix: 'pts' },
-          { label: 'Best Streak', value: 14, icon: Trophy, color: 'text-purple-500', suffix: 'days' },
+          { label: 'Best Streak', value: streak, icon: Trophy, color: 'text-purple-500', suffix: 'days' },
         ].map((stat, i) => (
           <div key={stat.label} className="animate-fade-in" style={{ animationDelay: `${i * 100}ms` }}>
             <Card><CardContent className="p-4 text-center">

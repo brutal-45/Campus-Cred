@@ -14,6 +14,7 @@ import {
   TrendingUp, Target, Award, Zap, Crown, Sparkles, ArrowRight, Wallet,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAppStore } from '@/store';
 
 interface ReferralActivity {
   id: string; name: string; date: string; status: 'registered' | 'active' | 'rewarded'; points: number;
@@ -23,30 +24,51 @@ interface Reward {
   id: string; name: string; description: string; required: number; current: number; icon: React.ElementType; unlocked: boolean;
 }
 
-const mockActivities: ReferralActivity[] = [
-  { id: '1', name: 'Amit Kumar', date: '2024-06-08', status: 'rewarded', points: 20 },
-  { id: '2', name: 'Sneha Das', date: '2024-06-07', status: 'active', points: 20 },
-  { id: '3', name: 'Vikram Singh', date: '2024-06-05', status: 'registered', points: 0 },
-  { id: '4', name: 'Priya Nair', date: '2024-06-03', status: 'rewarded', points: 20 },
-  { id: '5', name: 'Karthik R', date: '2024-06-01', status: 'active', points: 20 },
-  { id: '6', name: 'Deepa M', date: '2024-05-28', status: 'rewarded', points: 20 },
-];
 
-const rewards: Reward[] = [
-  { id: '1', name: 'Bronze Ambassador', description: 'Refer 3 students', required: 3, current: 3, icon: Award, unlocked: true },
-  { id: '2', name: 'Silver Ambassador', description: 'Refer 5 students', required: 5, current: 5, icon: Star, unlocked: true },
-  { id: '3', name: 'Gold Ambassador', description: 'Refer 10 students', required: 10, current: 7, icon: Crown, unlocked: false },
-  { id: '4', name: 'Platinum Ambassador', description: 'Refer 25 students', required: 25, current: 7, icon: Trophy, unlocked: false },
-  { id: '5', name: 'Legend Ambassador', description: 'Refer 50 students', required: 50, current: 7, icon: Sparkles, unlocked: false },
+const rewardTiers = [
+  { id: '1', name: 'Bronze Ambassador', description: 'Refer 3 students', required: 3, icon: Award },
+  { id: '2', name: 'Silver Ambassador', description: 'Refer 5 students', required: 5, icon: Star },
+  { id: '3', name: 'Gold Ambassador', description: 'Refer 10 students', required: 10, icon: Crown },
+  { id: '4', name: 'Platinum Ambassador', description: 'Refer 25 students', required: 25, icon: Trophy },
+  { id: '5', name: 'Legend Ambassador', description: 'Refer 50 students', required: 50, icon: Sparkles },
 ];
 
 export default function AmbassadorPage() {
-  const [referralCode] = React.useState('STUDENT2024XYZ');
-  const [referralLink, setReferralLink] = React.useState('https://campuscred.in/r/STUDENT2024XYZ');
+  const { token } = useAppStore();
+  const [referralCode, setReferralCode] = React.useState('');
+  const [referralLink, setReferralLink] = React.useState('');
   const [copied, setCopied] = React.useState(false);
-  const [totalReferrals] = React.useState(7);
-  const [totalPoints] = React.useState(140);
-  const [activeReferrals] = React.useState(4);
+  const [totalReferrals, setTotalReferrals] = React.useState(0);
+  const [totalPoints, setTotalPoints] = React.useState(0);
+  const [activeReferrals, setActiveReferrals] = React.useState(0);
+  const [currentBadge, setCurrentBadge] = React.useState('Campus Ambassador');
+  const [nextBadgeRequirement, setNextBadgeRequirement] = React.useState<number | null>(3);
+  const [activities, setActivities] = React.useState<ReferralActivity[]>([]);
+
+  React.useEffect(() => {
+    if (!token) return;
+    fetch('/api/ambassador', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (!data?.stats) return;
+        setReferralCode(data.stats.referralCode || '');
+        setReferralLink(data.stats.referralLink || '');
+        setTotalReferrals(data.stats.totalReferrals || 0);
+        setTotalPoints(data.stats.totalPoints || 0);
+        setActiveReferrals(data.stats.activeReferrals || 0);
+        setCurrentBadge(data.stats.currentBadge || 'Campus Ambassador');
+        setNextBadgeRequirement(data.stats.nextBadgeRequirement ?? null);
+        setActivities(data.activities || []);
+      })
+      .catch(() => {});
+  }, [token]);
+
+  const rewards: Reward[] = rewardTiers.map(t => ({
+    ...t,
+    current: Math.min(totalReferrals, t.required),
+    unlocked: totalReferrals >= t.required,
+  }));
+  const referralsToNextReward = nextBadgeRequirement !== null ? Math.max(nextBadgeRequirement - totalReferrals, 0) : 0;
 
   const copyLink = async () => {
     try {
@@ -88,7 +110,7 @@ export default function AmbassadorPage() {
           <p className="text-sm text-text-secondary">Refer students, earn rewards, and grow the CampusCred community</p>
         </div>
         <Badge className="bg-amber-100 text-amber-700 border-amber-200 px-3 py-1 w-fit">
-          <Star className="w-3.5 h-3.5 mr-1" />Silver Ambassador
+          <Star className="w-3.5 h-3.5 mr-1" />{currentBadge}
         </Badge>
       </div>
 
@@ -98,7 +120,7 @@ export default function AmbassadorPage() {
           { label: 'Total Referrals', value: totalReferrals, icon: Users, color: 'text-electric' },
           { label: 'Active Referrals', value: activeReferrals, icon: CheckCircle, color: 'text-green-500' },
           { label: 'Points Earned', value: totalPoints, icon: Zap, color: 'text-amber-500' },
-          { label: 'Next Reward', value: '3 more', icon: Trophy, color: 'text-purple-500' },
+          { label: 'Next Reward', value: nextBadgeRequirement !== null ? `${referralsToNextReward} more` : 'Max tier', icon: Trophy, color: 'text-purple-500' },
         ].map((stat, i) => (
           <div key={stat.label} className="animate-fade-in" style={{ animationDelay: `${i * 100}ms` }}>
             <Card><CardContent className="p-4 text-center">
@@ -186,7 +208,7 @@ export default function AmbassadorPage() {
         <Card>
           <CardContent className="p-0">
             <div className="divide-y" style={{ borderColor: '#E2E8F0' }}>
-              {mockActivities.map((activity, i) => (
+              {activities.map((activity, i) => (
                 <div
                   key={activity.id}
                   className="animate-fade-in flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"

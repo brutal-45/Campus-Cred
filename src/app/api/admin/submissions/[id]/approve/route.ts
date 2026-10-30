@@ -69,10 +69,13 @@ export async function PUT(
       skills = [];
     }
 
-    // Generate premium certificate
+    // Generate premium certificate. issuedDate is part of the tamper-proof
+    // hash, so fix it here and persist exactly this value below — otherwise
+    // /api/verify can never reproduce the hash.
     const certificateId = generateCertificateId();
+    const issuedDate = new Date();
     let certificateResult;
-    
+
     try {
       certificateResult = await generateCertificate({
         certificateId,
@@ -87,6 +90,8 @@ export async function PUT(
         level: newLevel,
         studentId: submission.student.id,
         profilePhotoUrl: submission.student.profilePhoto,
+        taskId: submission.taskId,
+        issuedDate: issuedDate.toISOString(),
       });
     } catch (certError) {
       console.error('[Certificate Generation Error]', certError);
@@ -109,6 +114,7 @@ export async function PUT(
         city: submission.student.city,
         skills: JSON.stringify(skills),
         level: newLevel,
+        issuedDate,
         qrCodeUrl: certificateResult?.pngUrl || null,
         pdfUrl: certificateResult?.pdfUrl || null,
         certificateImageUrl: certificateResult?.pngUrl || null,

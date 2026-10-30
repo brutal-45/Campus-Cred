@@ -12,24 +12,48 @@ import {
   Megaphone, Settings, AlertCircle, Info, Sparkles, ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+import { useAppStore } from '@/store';
 
 interface Notification {
   id: string; title: string; message: string; time: string; read: boolean; type: 'task' | 'certificate' | 'mentorship' | 'streak' | 'system' | 'social' | 'achievement';
   actionUrl?: string; actionLabel?: string;
 }
 
-const mockNotifications: Notification[] = [
-  { id: '1', title: 'Certificate Ready! 🎉', message: 'Your "Web Development Professional" certificate is ready for download. Share it on LinkedIn!', time: '5m ago', read: false, type: 'certificate', actionUrl: '/dashboard/portfolio', actionLabel: 'View Certificate' },
-  { id: '2', title: 'New Challenge Available', message: 'Today\'s challenge: "Build a REST API" - Complete it to earn 50 points and maintain your streak!', time: '1h ago', read: false, type: 'task', actionUrl: '/dashboard/challenges', actionLabel: 'Start Challenge' },
-  { id: '3', title: 'Mentor Session Reminder', message: 'Your session with Priya Sharma starts in 30 minutes. Don\'t forget to prepare your questions!', time: '2h ago', read: false, type: 'mentorship', actionUrl: '/dashboard/mentorship', actionLabel: 'Join Session' },
-  { id: '4', title: 'Streak Milestone! 🔥', message: 'Amazing! You\'ve maintained a 7-day streak. Keep going to unlock the 14-day badge!', time: '1d ago', read: true, type: 'streak' },
-  { id: '5', title: 'Task Submission Approved', message: 'Your submission for "UI Design Challenge" has been approved. +70 points added to your score!', time: '1d ago', read: true, type: 'achievement' },
-  { id: '6', title: 'New Message from Rahul', message: 'Rahul Verma sent you a message about mock interview preparation.', time: '2d ago', read: true, type: 'social', actionUrl: '/dashboard/messages', actionLabel: 'Reply' },
-  { id: '7', title: 'Leaderboard Update', message: 'You moved up 3 positions in the CSE branch leaderboard! Current rank: #12', time: '2d ago', read: true, type: 'achievement', actionUrl: '/dashboard/leaderboard', actionLabel: 'View Leaderboard' },
-  { id: '8', title: 'Ambassador Reward Unlocked', message: 'You\'ve earned the "Silver Ambassador" badge for referring 5 students! Claim your reward.', time: '3d ago', read: true, type: 'system', actionUrl: '/dashboard/ambassador', actionLabel: 'Claim Reward' },
-  { id: '9', title: 'System Update', message: 'CampusCred now supports PDF certificate downloads! Update your portfolio to showcase them.', time: '4d ago', read: true, type: 'system' },
-  { id: '10', title: 'Internship Opportunity', message: 'New micro-internship at Flipkart matching your skills. Apply before the deadline!', time: '5d ago', read: true, type: 'task', actionUrl: '/dashboard/journey', actionLabel: 'Apply Now' },
-];
+interface ApiNotification {
+  id: string; title?: string | null; message: string; type: string; link?: string | null; isRead: boolean; createdAt: string;
+}
+
+function timeAgo(iso: string): string {
+  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
+}
+
+function mapType(n: ApiNotification): Notification['type'] {
+  const text = `${n.type} ${n.message}`.toLowerCase();
+  if (text.includes('certificate')) return 'certificate';
+  if (text.includes('mentor') || text.includes('session')) return 'mentorship';
+  if (text.includes('message')) return 'social';
+  if (text.includes('submission') || text.includes('task') || text.includes('internship') || text.includes('application')) return 'task';
+  if (n.type === 'success') return 'achievement';
+  return 'system';
+}
+
+function mapNotification(n: ApiNotification): Notification {
+  return {
+    id: n.id,
+    title: n.title || (n.type === 'success' ? 'Great news!' : n.type === 'error' ? 'Action needed' : 'Update'),
+    message: n.message,
+    time: timeAgo(n.createdAt),
+    read: n.isRead,
+    type: mapType(n),
+    actionUrl: n.link || undefined,
+    actionLabel: n.link ? 'View' : undefined,
+  };
+}
 
 const typeConfig: Record<string, { icon: React.ElementType; color: string; bgColor: string }> = {
   task: { icon: BookOpen, color: 'text-blue-500', bgColor: 'bg-blue-100' },
@@ -42,8 +66,29 @@ const typeConfig: Record<string, { icon: React.ElementType; color: string; bgCol
 };
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = React.useState<Notification[]>(mockNotifications);
+  const { token } = useAppStore();
+  const router = useRouter();
+  const [notifications, setNotifications] = React.useState<Notification[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [filter, setFilter] = React.useState<string>('all');
+
+  React.useEffect(() => {
+    if (!token) { setLoading(false); return; }
+    fetch('/api/notifications', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => (r.ok ? r.json() : { notifications: [] }))
+      .then(d => setNotifications((d.notifications || []).map(mapNotification)))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  const apiCall = (method: string, body: unknown) => {
+    if (!token) return;
+    fetch('/api/notifications', {
+      method,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    }).catch(() => {});
+  };
 
   const unreadCount = notifications.filter(n => !n.read).length;
   const filteredNotifications = filter === 'all'
@@ -54,22 +99,30 @@ export default function NotificationsPage() {
 
   const markAsRead = (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    apiCall('PATCH', { id });
   };
 
   const markAllAsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    apiCall('PATCH', { all: true });
     toast.success('All notifications marked as read');
   };
 
   const deleteNotification = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
+    apiCall('DELETE', { id });
     toast.success('Notification deleted');
   };
 
   const clearAll = () => {
     setNotifications(prev => prev.filter(n => !n.read));
+    apiCall('DELETE', { readOnly: true });
     toast.success('Read notifications cleared');
   };
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-20"><div className="w-8 h-8 border-2 border-electric/30 border-t-electric rounded-full animate-spin" /></div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -157,7 +210,7 @@ export default function NotificationsPage() {
                           </div>
                           <div className="flex items-center gap-2 mt-2">
                             {notification.actionLabel && (
-                              <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                              <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => { markAsRead(notification.id); if (notification.actionUrl) router.push(notification.actionUrl); }}>
                                 {notification.actionLabel}
                                 <ExternalLink className="w-3 h-3" />
                               </Button>

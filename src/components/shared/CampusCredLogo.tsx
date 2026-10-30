@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-type LogoSize = 24 | 28 | 30 | 32 | 34 | 36 | 40 | 44 | 48 | 56 | 64;
+type LogoSize = 24 | 28 | 30 | 32 | 34 | 36 | 40 | 44 | 48 | 56 | 64 | 72 | 80;
 type LogoVariant = 'full' | 'icon' | 'white' | 'dark' | 'gold';
 
 interface CampusCredLogoProps {

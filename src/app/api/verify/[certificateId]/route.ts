@@ -51,14 +51,14 @@ export async function GET(
       skills = [];
     }
 
-    // Verify hash if available
-    let hashValid = null;
+    // Verify hash if available (welcome certificates have no task → '')
+    let hashValid: boolean | null = null;
     if (certificate.hash) {
       try {
         hashValid = verifyCertificateHash(
           certificate.certificateId,
           certificate.studentId,
-          certificate.taskId,
+          certificate.taskId ?? '',
           certificate.issuedDate.toISOString(),
           certificate.studentName,
           certificate.hash
@@ -82,8 +82,10 @@ export async function GET(
       certificateId: certificate.certificateId,
       certificateImageUrl: certificate.certificateImageUrl,
       thumbnailUrl: certificate.thumbnailUrl,
-      taskDifficulty: certificate.task.difficulty,
-      taskCategory: certificate.task.category,
+      // Welcome certificates have no task — don't crash dereferencing it.
+      taskDifficulty: certificate.task?.difficulty ?? null,
+      taskCategory: certificate.task?.category ?? null,
+      certType: certificate.certType,
       hashValid,
     });
   } catch (error) {

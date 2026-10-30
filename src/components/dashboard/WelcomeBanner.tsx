@@ -128,7 +128,6 @@ export function WelcomeBanner({ user, onBrowseTasks }: WelcomeBannerProps) {
                       style={{
                         backgroundColor: day.isActive ? '#F97316' : 'rgba(255,255,255,0.10)',
                         border: day.isActive ? 'none' : '1px solid rgba(255,255,255,0.20)',
-                        ringOffsetColor: '#0A0F2C',
                       }}
                     >
                       {day.isActive && (

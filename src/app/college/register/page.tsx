@@ -28,7 +28,7 @@ import {
  Landmark,
  Phone,
  Star,
- User,
+ User as UserIcon,
  Sparkles,
  Loader2,
  ChevronLeft,
@@ -150,7 +150,7 @@ export default function CollegeRegisterPage() {
  <div className="space-y-2">
  <Label className="text-sm font-medium">Admin Name <span className="text-red-500">*</span></Label>
  <div className="relative">
- <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
+ <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
  <Input
  value={form.fullName}
  onChange={(e) => updateField('fullName', e.target.value)}

@@ -80,7 +80,9 @@ export async function POST(req: NextRequest) {
       skills = [];
     }
 
-    // Generate the certificate
+    // Generate the certificate. issuedDate is part of the tamper-proof hash,
+    // so fix it here and persist exactly this value below.
+    const issuedDate = new Date();
     const result = await generateCertificate({
       certificateId,
       studentName: student.fullName,
@@ -94,6 +96,8 @@ export async function POST(req: NextRequest) {
       level,
       studentId: student.id,
       profilePhotoUrl: student.profilePhoto,
+      taskId: task.id,
+      issuedDate: issuedDate.toISOString(),
     });
 
     // Save certificate record to database
@@ -111,6 +115,7 @@ export async function POST(req: NextRequest) {
         city: student.city,
         skills: JSON.stringify(skills),
         level,
+        issuedDate,
         qrCodeUrl: result.pngUrl,
         pdfUrl: result.pdfUrl,
         certificateImageUrl: result.pngUrl,

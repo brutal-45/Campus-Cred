@@ -1,24 +1,18 @@
 /**
  * CampusCred — Auto-Generated Student Avatar System
- * 
- * Generates professional, aesthetic avatars using node-canvas
- * when a student has not uploaded a profile photo.
- * 
+ *
+ * Generates professional, aesthetic avatars using sharp (SVG rendering)
+ * when a student has not uploaded a profile photo. Replaces the previous
+ * node-canvas implementation, whose native build frequently broke installs
+ * on CI and serverless platforms.
+ *
  * Output: 800x800px circular PNG with gradient background,
  * geometric pattern overlay, and bold initials.
  */
 
-import { createCanvas, registerFont, GlobalFonts } from 'canvas';
+import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs';
-
-// Register Poppins Bold for avatar generation
-const FONT_DIR = path.join(__dirname, 'fonts');
-const POPPINS_BOLD = path.join(FONT_DIR, 'Poppins-Bold.ttf');
-
-if (fs.existsSync(POPPINS_BOLD)) {
-  registerFont(POPPINS_BOLD, { family: 'PoppinsAvatar', weight: 'bold' });
-}
 
 /** 8 gradient pairs based on student name hash */
 const GRADIENT_PAIRS = [
@@ -57,80 +51,69 @@ function hashName(name: string): number {
  * "Mohammed Ali Khan" → "MA"
  */
 export function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/);
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'S';
   if (parts.length === 1) return parts[0][0].toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-/**
- * Draw a geometric pattern overlay on the canvas
- */
-function drawPattern(
-  ctx: ReturnType<typeof createCanvas>['getContext'] extends (...args: any) => infer R ? R : never,
-  pattern: PatternType,
-  size: number
-) {
-  ctx.save();
-  ctx.globalAlpha = 0.10;
-  ctx.strokeStyle = '#FFFFFF';
-  ctx.fillStyle = '#FFFFFF';
-  ctx.lineWidth = 1;
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/** Build the geometric pattern overlay as SVG markup (drawn at 10% opacity). */
+function patternSvg(pattern: PatternType, size: number): string {
+  const scale = size / 800;
+  const parts: string[] = [];
 
   switch (pattern) {
     case 'hexagon': {
-      const hexSize = 30;
+      const hexSize = 30 * scale;
       const h = hexSize * Math.sqrt(3);
       for (let row = -1; row < size / h + 1; row++) {
         for (let col = -1; col < size / (hexSize * 1.5) + 1; col++) {
           const x = col * hexSize * 1.5;
           const y = row * h + (col % 2 === 0 ? 0 : h / 2);
-          ctx.beginPath();
+          const points: string[] = [];
           for (let i = 0; i < 6; i++) {
             const angle = (Math.PI / 3) * i - Math.PI / 6;
-            const px = x + hexSize * Math.cos(angle);
-            const py = y + hexSize * Math.sin(angle);
-            if (i === 0) ctx.moveTo(px, py);
-            else ctx.lineTo(px, py);
+            points.push(`${(x + hexSize * Math.cos(angle)).toFixed(1)},${(y + hexSize * Math.sin(angle)).toFixed(1)}`);
           }
-          ctx.closePath();
-          ctx.stroke();
+          parts.push(`<polygon points="${points.join(' ')}" fill="none" stroke="#FFFFFF" stroke-width="1"/>`);
         }
       }
       break;
     }
     case 'diagonal': {
-      const spacing = 20;
+      const spacing = 20 * scale;
       for (let i = -size; i < size * 2; i += spacing) {
-        ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i + size, size);
-        ctx.stroke();
+        parts.push(`<line x1="${i.toFixed(1)}" y1="0" x2="${(i + size).toFixed(1)}" y2="${size}" stroke="#FFFFFF" stroke-width="1"/>`);
       }
       break;
     }
     case 'dots': {
-      const dotSpacing = 24;
+      const dotSpacing = 24 * scale;
       for (let y = 0; y < size; y += dotSpacing) {
         for (let x = 0; x < size; x += dotSpacing) {
-          ctx.beginPath();
-          ctx.arc(x, y, 2, 0, Math.PI * 2);
-          ctx.fill();
+          parts.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(2 * scale).toFixed(1)}" fill="#FFFFFF"/>`);
         }
       }
       break;
     }
     case 'circles': {
-      const cx = size / 2;
-      const cy = size / 2;
-      for (let r = 40; r < size; r += 40) {
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.stroke();
+      for (let r = 40 * scale; r < size; r += 40 * scale) {
+        parts.push(`<circle cx="${size / 2}" cy="${size / 2}" r="${r.toFixed(1)}" fill="none" stroke="#FFFFFF" stroke-width="1"/>`);
       }
       break;
     }
   }
-  ctx.restore();
+
+  return `<g opacity="0.10">${parts.join('')}</g>`;
 }
 
 /**
@@ -139,111 +122,52 @@ function drawPattern(
  * @param size - Output size in pixels (default 800)
  * @returns Buffer containing PNG image data
  */
-export function generateAvatar(name: string, size: number = 800): Buffer {
-  const canvas = createCanvas(size, size);
-  const ctx = canvas.getContext('2d');
-  const hash = hashName(name);
+export async function generateAvatar(name: string, size: number = 800): Promise<Buffer> {
+  const hash = hashName(name || '');
+  const scale = size / 800;
 
-  // Select gradient pair and pattern based on hash
   const gradientPair = GRADIENT_PAIRS[hash % GRADIENT_PAIRS.length];
   const pattern = PATTERNS[hash % PATTERNS.length];
 
-  // --- LAYER 1: Gradient background (135° diagonal) ---
-  const gradient = ctx.createLinearGradient(0, 0, size, size);
-  gradient.addColorStop(0, gradientPair[0]);
-  gradient.addColorStop(1, gradientPair[1]);
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, size, size);
-
-  // --- LAYER 2: Geometric pattern overlay ---
-  drawPattern(ctx, pattern, size);
-
-  // --- LAYER 3: Circular clip ---
-  // (We'll draw initials first, then clip the whole thing)
-
-  // --- LAYER 4: Initials ---
   const initials = getInitials(name);
-  const isSingle = initials.length === 1;
-  const fontSize = isSingle ? 320 : 280;
+  const fontSize = (initials.length === 1 ? 320 : 280) * scale;
 
-  // Use Poppins Bold if registered, fallback to sans-serif
-  let fontFamily = 'sans-serif';
-  try {
-    if (GlobalFonts && typeof GlobalFonts.get === 'function' && GlobalFonts.get('PoppinsAvatar')) {
-      fontFamily = 'PoppinsAvatar';
-    }
-  } catch {
-    // GlobalFonts not available, use fallback
-  }
+  const svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${gradientPair[0]}"/>
+      <stop offset="1" stop-color="${gradientPair[1]}"/>
+    </linearGradient>
+    <clipPath id="clip"><circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}"/></clipPath>
+  </defs>
+  <g clip-path="url(#clip)">
+    <rect width="${size}" height="${size}" fill="url(#bg)"/>
+    ${patternSvg(pattern, size)}
+    <text x="${size / 2}" y="${size / 2}" text-anchor="middle" dominant-baseline="central"
+      font-family="Poppins, Arial, Helvetica, sans-serif" font-weight="700"
+      font-size="${fontSize}" letter-spacing="${initials.length === 1 ? 0 : 8 * scale}"
+      fill="#FFFFFF">${escapeXml(initials)}</text>
+  </g>
+  <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 3 * scale}" fill="none" stroke="#D4AF37" stroke-width="${6 * scale}"/>
+  <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 8 * scale}" fill="none" stroke="#FFFFFF" stroke-width="${3 * scale}"/>
+</svg>`;
 
-  ctx.save();
-  ctx.font = `bold ${fontSize}px "${fontFamily}", sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#FFFFFF';
-
-  // Text shadow
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
-  ctx.shadowBlur = 12;
-  ctx.shadowOffsetX = 4;
-  ctx.shadowOffsetY = 4;
-
-  // Letter spacing for 2 initials
-  if (!isSingle) {
-    ctx.letterSpacing = '8px';
-  }
-
-  ctx.fillText(initials, size / 2, size / 2);
-  ctx.restore();
-
-  // --- LAYER 5: Clip to circle ---
-  // We need to create a new canvas for the circular result
-  const resultCanvas = createCanvas(size, size);
-  const resultCtx = resultCanvas.getContext('2d');
-
-  // Clip to circle
-  resultCtx.beginPath();
-  resultCtx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
-  resultCtx.closePath();
-  resultCtx.clip();
-
-  // Draw the avatar content into the clipped context
-  resultCtx.drawImage(canvas as unknown as CanvasImageSource, 0, 0);
-
-  // --- LAYER 6: Gold border ring ---
-  resultCtx.save();
-  // Outer gold ring
-  resultCtx.beginPath();
-  resultCtx.arc(size / 2, size / 2, size / 2 - 3, 0, Math.PI * 2);
-  resultCtx.strokeStyle = '#D4AF37';
-  resultCtx.lineWidth = 6;
-  resultCtx.stroke();
-
-  // Inner white ring
-  resultCtx.beginPath();
-  resultCtx.arc(size / 2, size / 2, size / 2 - 8, 0, Math.PI * 2);
-  resultCtx.strokeStyle = '#FFFFFF';
-  resultCtx.lineWidth = 3;
-  resultCtx.stroke();
-  resultCtx.restore();
-
-  return resultCanvas.toBuffer('image/png');
+  return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
 /**
  * Generate avatar and save to file
  * @param name - Student's full name
  * @param studentId - Student's ID for file naming
- * @returns File path of the saved avatar
+ * @returns Public path (local disk) or base64 data URL (Vercel) of the avatar
  */
-export function generateAndSaveAvatar(name: string, studentId: string): string {
-  const buffer = generateAvatar(name);
+export async function generateAndSaveAvatar(name: string, studentId: string): Promise<string> {
+  const buffer = await generateAvatar(name);
   const isVercel = process.env.VERCEL === '1';
 
   if (isVercel) {
     // On Vercel, public/ is read-only — return base64 data URL
-    const base64 = buffer.toString('base64');
-    return `data:image/png;base64,${base64}`;
+    return `data:image/png;base64,${buffer.toString('base64')}`;
   }
 
   const dir = path.join(process.cwd(), 'public', 'uploads', 'avatars');

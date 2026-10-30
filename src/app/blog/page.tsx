@@ -174,10 +174,10 @@ export default function BlogPage() {
  </p>
 
  {paginated.length > 0 ? (
- <div layout className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+ <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
  <>
  {paginated.map((post, i) => (
- <div key={post.id} layout>
+ <div key={post.id}>
  <Card className="h-full hover:shadow-lg transition-all hover:border-electric/30 group cursor-pointer">
  <CardHeader className="pb-2">
  <div className="flex items-center justify-between mb-2">

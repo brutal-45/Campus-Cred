@@ -13,6 +13,7 @@ import {
   ChevronUp, ChevronDown, Flame, GraduationCap, MapPin,
 } from 'lucide-react';
 import { LEVEL_THRESHOLDS } from '@/lib/constants';
+import { useAppStore } from '@/store';
 
 interface LeaderboardEntry {
   id: string; rank: number; name: string; avatar: string; branch: string; college: string;
@@ -22,43 +23,94 @@ interface LeaderboardEntry {
 
 const branches = ['All', 'CSE', 'ECE', 'IT', 'Mechanical', 'Civil', 'EEE', 'Data Science', 'AI & ML'];
 
-const mockLeaderboard: LeaderboardEntry[] = [
-  { id: '1', rank: 1, name: 'Arjun Mehta', avatar: 'AM', branch: 'CSE', college: 'IIT Delhi', score: 920, level: 'Legend', streak: 45, tasksCompleted: 28, change: 'same', changeValue: 0 },
-  { id: '2', rank: 2, name: 'Priya Sharma', avatar: 'PS', branch: 'CSE', college: 'IIT Bombay', score: 875, level: 'Elite', streak: 38, tasksCompleted: 25, change: 'up', changeValue: 2 },
-  { id: '3', rank: 3, name: 'Rahul Verma', avatar: 'RV', branch: 'ECE', college: 'NIT Trichy', score: 810, level: 'Elite', streak: 30, tasksCompleted: 22, change: 'down', changeValue: 1 },
-  { id: '4', rank: 4, name: 'Sneha Iyer', avatar: 'SI', branch: 'IT', college: 'VIT Vellore', score: 750, level: 'Elite', streak: 25, tasksCompleted: 20, change: 'up', changeValue: 3 },
-  { id: '5', rank: 5, name: 'Vikram Singh', avatar: 'VS', branch: 'CSE', college: 'IIIT Hyderabad', score: 680, level: 'Elite', streak: 22, tasksCompleted: 18, change: 'same', changeValue: 0 },
-  { id: '6', rank: 6, name: 'Ananya Patel', avatar: 'AP', branch: 'Data Science', college: 'BITS Pilani', score: 620, level: 'Expert', streak: 18, tasksCompleted: 16, change: 'up', changeValue: 5 },
-  { id: '7', rank: 7, name: 'Karthik R', avatar: 'KR', branch: 'AI & ML', college: 'IIT Madras', score: 580, level: 'Expert', streak: 15, tasksCompleted: 15, change: 'down', changeValue: 2 },
-  { id: '8', rank: 8, name: 'Deepa M', avatar: 'DM', branch: 'CSE', college: 'NIT Warangal', score: 540, level: 'Expert', streak: 12, tasksCompleted: 14, change: 'up', changeValue: 1 },
-  { id: '9', rank: 9, name: 'Suresh Kumar', avatar: 'SK', branch: 'Mechanical', college: 'DTU Delhi', score: 480, level: 'Expert', streak: 10, tasksCompleted: 12, change: 'down', changeValue: 3 },
-  { id: '10', rank: 10, name: 'Meera Joshi', avatar: 'MJ', branch: 'ECE', college: 'NSUT Delhi', score: 450, level: 'Expert', streak: 9, tasksCompleted: 11, change: 'up', changeValue: 2 },
-  { id: '11', rank: 11, name: 'Aditya Rao', avatar: 'AR', branch: 'Civil', college: 'COEP Pune', score: 400, level: 'Expert', streak: 7, tasksCompleted: 10, change: 'same', changeValue: 0 },
-  { id: '12', rank: 12, name: 'Nisha Gupta', avatar: 'NG', branch: 'CSE', college: 'Jadavpur University', score: 380, level: 'Expert', streak: 8, tasksCompleted: 9, change: 'up', changeValue: 4 },
-  { id: '13', rank: 13, name: 'Rohan Das', avatar: 'RD', branch: 'EEE', college: 'IIT Kharagpur', score: 350, level: 'Expert', streak: 6, tasksCompleted: 8, change: 'down', changeValue: 1 },
-  { id: '14', rank: 14, name: 'Pooja Reddy', avatar: 'PR', branch: 'IT', college: 'IIIT Delhi', score: 310, level: 'Achiever', streak: 5, tasksCompleted: 7, change: 'up', changeValue: 2 },
-  { id: '15', rank: 15, name: 'Siddharth Nair', avatar: 'SN', branch: 'Data Science', college: 'IISC Bangalore', score: 280, level: 'Achiever', streak: 4, tasksCompleted: 6, change: 'down', changeValue: 2 },
-];
+function initialsOf(name: string): string {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'S';
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 const getLevelInfo = (levelName: string) => LEVEL_THRESHOLDS.find(l => l.level === levelName) || LEVEL_THRESHOLDS[0];
 
 export default function LeaderboardPage() {
+  const { token, user } = useAppStore();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedBranch, setSelectedBranch] = React.useState('All');
   const [timeframe, setTimeframe] = React.useState('all');
+  const [entries, setEntries] = React.useState<LeaderboardEntry[]>([]);
+  const [globalEntries, setGlobalEntries] = React.useState<LeaderboardEntry[]>([]);
+  const [myRank, setMyRank] = React.useState<number | null>(null);
+  const [loading, setLoading] = React.useState(true);
 
-  const filteredEntries = mockLeaderboard.filter(entry => {
+  // Global list (for branch-wise stats, independent of the branch filter)
+  React.useEffect(() => {
+    if (!token) return;
+    fetch('/api/student/leaderboard?branch=All&limit=100', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (!data) return;
+        setGlobalEntries((data.leaderboard || []).map((e: Record<string, unknown>) => ({
+          branch: String(e.branch || ''),
+          score: Number(e.score ?? e.campusCredScore ?? 0),
+        })) as LeaderboardEntry[]);
+      })
+      .catch(() => {});
+  }, [token]);
+
+  React.useEffect(() => {
+    if (!token) { setLoading(false); return; }
+    setLoading(true);
+    fetch(`/api/student/leaderboard?branch=${encodeURIComponent(selectedBranch)}&limit=50`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (!data) return;
+        setEntries((data.leaderboard || []).map((e: Record<string, unknown>) => ({
+          id: String(e.id),
+          rank: Number(e.rank),
+          name: String(e.fullName || ''),
+          avatar: initialsOf(String(e.fullName || '')),
+          branch: String(e.branch || ''),
+          college: String(e.college || ''),
+          score: Number(e.score ?? e.campusCredScore ?? 0),
+          level: String(e.level || 'Starter'),
+          streak: Number(e.streakDays || 0),
+          tasksCompleted: Number(e.tasksCompleted || 0),
+          change: 'same' as const,
+          changeValue: 0,
+        })));
+        if (data.currentUser?.rank) setMyRank(data.currentUser.rank);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [token, selectedBranch]);
+
+  const filteredEntries = entries.filter(entry => {
     const matchesSearch = entry.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       entry.college.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesBranch = selectedBranch === 'All' || entry.branch === selectedBranch;
-    return matchesSearch && matchesBranch;
+    return matchesSearch;
   });
 
   const top3 = filteredEntries.slice(0, 3);
   const rest = filteredEntries.slice(3);
 
-  const myRank = 12;
-  const myEntry = mockLeaderboard.find(e => e.rank === myRank);
+  const myEntry: LeaderboardEntry | undefined = user ? {
+    id: user.id,
+    rank: myRank || 0,
+    name: user.fullName,
+    avatar: initialsOf(user.fullName),
+    branch: user.branch || '',
+    college: user.college || '',
+    score: user.campusCredScore || 0,
+    level: user.level || 'Starter',
+    streak: user.streakDays || 0,
+    tasksCompleted: entries.find(e => e.id === user.id)?.tasksCompleted || 0,
+    change: 'same',
+    changeValue: 0,
+  } : undefined;
 
   const rankColors: Record<number, string> = {
     1: 'from-amber-300 to-amber-500',
@@ -82,13 +134,13 @@ export default function LeaderboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <Badge className="bg-amber-100 text-amber-700 border-amber-200 px-3 py-1">
-            <Star className="w-3.5 h-3.5 mr-1" />Your Rank: #{myRank}
+            <Star className="w-3.5 h-3.5 mr-1" />Your Rank: {myRank ? `#${myRank}` : '—'}
           </Badge>
         </div>
       </div>
 
       {/* My Position Card */}
-      {myEntry && (
+      {myEntry && myRank !== null && (
         <div className="animate-fade-in">
           <Card className="border-2 border-electric/20 bg-electric/[0.03]">
             <CardContent className="p-4">
@@ -232,7 +284,7 @@ export default function LeaderboardPage() {
         <h2 className="text-lg font-semibold font-heading mb-4">Branch-wise Stats</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {['CSE', 'ECE', 'IT', 'Data Science'].map((branch, i) => {
-            const branchEntries = mockLeaderboard.filter(e => e.branch === branch);
+            const branchEntries = globalEntries.filter(e => e.branch === branch);
             const avgScore = branchEntries.length > 0 ? Math.round(branchEntries.reduce((sum, e) => sum + e.score, 0) / branchEntries.length) : 0;
             return (
               <div key={branch} className="animate-fade-in" style={{ animationDelay: `${i * 50}ms` }}>

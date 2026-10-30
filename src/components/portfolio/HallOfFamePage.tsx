@@ -59,7 +59,7 @@ export function HallOfFamePage() {
         setData(result);
         // Auto-expand first 3 branches
         if (result.branches) {
-          const initial = new Set(result.branches.slice(0, 3).map((b: BranchGroup) => b.branch));
+          const initial = new Set<string>(result.branches.slice(0, 3).map((b: BranchGroup) => b.branch));
           setExpandedBranches(initial);
         }
       }

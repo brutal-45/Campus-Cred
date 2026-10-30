@@ -188,10 +188,10 @@ export default function CompaniesPage() {
  </p>
 
  {paginated.length > 0 ? (
- <div layout className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+ <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
  <>
  {paginated.map((company, i) => (
- <div key={company.id} layout>
+ <div key={company.id}>
  <Card className="h-full hover:shadow-lg transition-all hover:border-electric/30 group">
  <CardHeader className="pb-3">
  <div className="flex items-center gap-4">

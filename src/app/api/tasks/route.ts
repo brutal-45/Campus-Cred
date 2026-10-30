@@ -79,7 +79,10 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { title, description, degree, branch, difficulty, points, deadline } = body;
+    const {
+      title, description, degree, branch, difficulty, points, deadline,
+      category, estimatedHours, isChallenge, challengeDate,
+    } = body;
 
     if (!title || !description || !degree || !branch || !deadline) {
       return NextResponse.json(
@@ -97,6 +100,10 @@ export async function POST(req: NextRequest) {
         difficulty: difficulty || 'Medium',
         points: points || 10,
         deadline: new Date(deadline),
+        category: category || null,
+        estimatedHours: estimatedHours ? String(estimatedHours) : null,
+        isChallenge: Boolean(isChallenge),
+        challengeDate: challengeDate ? new Date(challengeDate) : (isChallenge ? new Date() : null),
         isActive: true,
         createdById: payload.userId,
       },

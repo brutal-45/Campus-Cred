@@ -183,10 +183,10 @@ export default function CollegesPage() {
  </p>
 
  {paginated.length > 0 ? (
- <div layout className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+ <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
  <>
  {paginated.map((college, i) => (
- <div key={college.id} layout>
+ <div key={college.id}>
  <Card className="h-full hover:shadow-lg transition-all hover:border-amber-500/30 group">
  <CardHeader className="pb-3">
  <div className="flex items-center gap-4">

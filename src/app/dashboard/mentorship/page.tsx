@@ -15,27 +15,19 @@ import {
   Mic, ExternalLink, Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAppStore } from '@/store';
 
 interface Mentor { id: string; name: string; role: string; company: string; avatar: string; rating: number; sessions: number; expertise: string[]; available: boolean; }
 interface Session { id: string; mentorId: string; mentorName: string; topic: string; date: string; time: string; status: 'upcoming' | 'completed' | 'cancelled'; notes: string; rating?: number; }
 
-const mockMentors: Mentor[] = [
-  { id: '1', name: 'Priya Sharma', role: 'Senior Engineer', company: 'Google', avatar: 'PS', rating: 4.9, sessions: 156, expertise: ['System Design', 'DSA', 'Career Growth'], available: true },
-  { id: '2', name: 'Rahul Verma', role: 'Product Manager', company: 'Razorpay', avatar: 'RV', rating: 4.8, sessions: 89, expertise: ['Product Thinking', 'Case Studies', 'Interviews'], available: true },
-  { id: '3', name: 'Ananya Patel', role: 'UX Lead', company: 'Flipkart', avatar: 'AP', rating: 4.7, sessions: 67, expertise: ['UX Design', 'Portfolio Review', 'Design Thinking'], available: false },
-  { id: '4', name: 'Arjun Reddy', role: 'Data Scientist', company: 'Amazon', avatar: 'AR', rating: 4.9, sessions: 120, expertise: ['ML', 'Python', 'Data Analysis'], available: true },
-  { id: '5', name: 'Sneha Iyer', role: 'Tech Lead', company: 'Microsoft', avatar: 'SI', rating: 4.8, sessions: 200, expertise: ['Full Stack', 'React', 'Architecture'], available: true },
-];
 
-const mockSessions: Session[] = [
-  { id: '1', mentorId: '1', mentorName: 'Priya Sharma', topic: 'System Design for Scale', date: '2025-06-12', time: '10:00 AM', status: 'upcoming', notes: 'Prepare for distributed systems interview' },
-  { id: '2', mentorId: '5', mentorName: 'Sneha Iyer', topic: 'React Architecture Review', date: '2025-06-14', time: '3:00 PM', status: 'upcoming', notes: 'Review portfolio project architecture' },
-  { id: '3', mentorId: '2', mentorName: 'Rahul Verma', topic: 'PM Interview Prep', date: '2025-06-05', time: '11:00 AM', status: 'completed', notes: 'Great session on case study frameworks', rating: 5 },
-  { id: '4', mentorId: '4', mentorName: 'Arjun Reddy', topic: 'ML Basics', date: '2025-06-01', time: '2:00 PM', status: 'completed', notes: 'Covered supervised learning basics', rating: 4 },
-  { id: '5', mentorId: '3', mentorName: 'Ananya Patel', topic: 'UX Portfolio Review', date: '2025-05-28', time: '4:00 PM', status: 'cancelled', notes: 'Had to reschedule' },
-];
 
 export default function MentorshipPage() {
+  const { token } = useAppStore();
+  const [mentors, setMentors] = React.useState<Mentor[]>([]);
+  const [sessions, setSessions] = React.useState<Session[]>([]);
+  const [stats, setStats] = React.useState({ upcoming: 0, completed: 0, avgRating: 0, availableMentors: 0 });
+  const [loading, setLoading] = React.useState(true);
   const [activeTab, setActiveTab] = React.useState('mentors');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [showBooking, setShowBooking] = React.useState(false);
@@ -46,23 +38,65 @@ export default function MentorshipPage() {
   const [bookingNotes, setBookingNotes] = React.useState('');
   const [isBooking, setIsBooking] = React.useState(false);
 
-  const filteredMentors = mockMentors.filter(m =>
+  const loadMentorship = React.useCallback(() => {
+    fetch('/api/mentorship', token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (!data) return;
+        setMentors(data.mentors || []);
+        setSessions(data.sessions || []);
+        if (data.stats) setStats(data.stats);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  React.useEffect(() => { loadMentorship(); }, [loadMentorship]);
+
+  const filteredMentors = mentors.filter(m =>
     m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     m.expertise.some(e => e.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const upcomingSessions = mockSessions.filter(s => s.status === 'upcoming');
-  const completedSessions = mockSessions.filter(s => s.status === 'completed');
-  const cancelledSessions = mockSessions.filter(s => s.status === 'cancelled');
+  const upcomingSessions = sessions.filter(s => s.status === 'upcoming');
+  const completedSessions = sessions.filter(s => s.status === 'completed');
+  const cancelledSessions = sessions.filter(s => s.status === 'cancelled');
 
   const handleBookSession = async () => {
     if (!selectedMentor || !bookingTopic || !bookingDate || !bookingTime) {
       toast.error('Please fill all required fields');
       return;
     }
+    if (!token) {
+      toast.error('Please sign in again to book a session');
+      return;
+    }
     setIsBooking(true);
-    await new Promise(r => setTimeout(r, 1000));
-    toast.success(`Session booked with ${selectedMentor.name}!`);
+    try {
+      const res = await fetch('/api/mentorship', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          mentorId: selectedMentor.id,
+          topic: bookingTopic,
+          date: bookingDate,
+          time: bookingTime,
+          notes: bookingNotes || undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to book session');
+        setIsBooking(false);
+        return;
+      }
+      if (data.session) setSessions(prev => [data.session, ...prev]);
+      toast.success(`Session booked with ${selectedMentor.name}!`);
+    } catch {
+      toast.error('Failed to book session. Please try again.');
+      setIsBooking(false);
+      return;
+    }
     setShowBooking(false);
     setSelectedMentor(null);
     setBookingTopic('');
@@ -90,8 +124,8 @@ export default function MentorshipPage() {
         {[
           { label: 'Upcoming', value: upcomingSessions.length, icon: Calendar, color: 'text-electric' },
           { label: 'Completed', value: completedSessions.length, icon: CheckCircle, color: 'text-green-500' },
-          { label: 'Avg Rating', value: '4.8', icon: Star, color: 'text-amber-500' },
-          { label: 'Mentors Available', value: mockMentors.filter(m => m.available).length, icon: Users, color: 'text-purple-500' },
+          { label: 'Avg Rating', value: stats.avgRating ? stats.avgRating.toFixed(1) : '—', icon: Star, color: 'text-amber-500' },
+          { label: 'Mentors Available', value: mentors.filter(m => m.available).length, icon: Users, color: 'text-purple-500' },
         ].map((stat, i) => (
           <div key={stat.label} className="animate-fade-in" style={{ animationDelay: `${i * 100}ms` }}>
             <Card><CardContent className="p-4 text-center">

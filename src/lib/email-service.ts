@@ -195,7 +195,11 @@ async function sendViaSmtp(options: EmailOptions): Promise<EmailResult> {
  * Console — Development/testing mode, logs email to console
  */
 async function sendViaConsole(options: EmailOptions): Promise<EmailResult> {
-  if (process.env.NODE_ENV === 'production') {
+  // Console delivery is disabled in production so OTPs are never "sent"
+  // into the void on a real deployment missing email config. CI/e2e test
+  // environments can explicitly opt in with ALLOW_CONSOLE_EMAIL=true so
+  // the full OTP flow can be exercised against server logs.
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_CONSOLE_EMAIL !== 'true') {
     return {
       success: false,
       error: 'Console email delivery is disabled in production. Configure Resend or SMTP.',
@@ -203,11 +207,15 @@ async function sendViaConsole(options: EmailOptions): Promise<EmailResult> {
     };
   }
 
-  console.log(`\n${'='.repeat(60)}`);
-  console.log(`[EMAIL-CONSOLE] To: ${maskEmail(options.to)}`);
-  console.log(`   Subject: ${options.subject}`);
-  console.log(`   Body: ${options.text}`);
-  console.log(`${'='.repeat(60)}\n`);
+  // process.stdout.write (not console.log): next.config strips console.log
+  // from production builds (compiler.removeConsole), which would make the
+  // console provider silently log nothing — its entire purpose is
+  // visibility in server logs (local dev + CI OTP extraction).
+  process.stdout.write(`\n${'='.repeat(60)}\n`);
+  process.stdout.write(`[EMAIL-CONSOLE] To: ${maskEmail(options.to)}\n`);
+  process.stdout.write(`   Subject: ${options.subject}\n`);
+  process.stdout.write(`   Body: ${options.text}\n`);
+  process.stdout.write(`${'='.repeat(60)}\n\n`);
 
   return {
     success: true,
