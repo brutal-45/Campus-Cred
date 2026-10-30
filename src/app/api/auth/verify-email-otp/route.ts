@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyOtp } from '@/lib/otp-service';
+import { db } from '@/lib/db';
 
 /**
  * POST /api/auth/verify-email-otp
@@ -36,6 +37,16 @@ export async function POST(req: NextRequest) {
         { verified: false, error: result.error },
         { status: 400 }
       );
+    }
+
+    // Persist verification server-side. Previously the onboarding UI asserted
+    // `isVerified` via the profile endpoint, which let any client verify
+    // itself without ever passing an OTP check.
+    if (purpose === 'verification') {
+      await db.user.updateMany({
+        where: { email: normalizedEmail },
+        data: { isVerified: true },
+      }).catch(() => {});
     }
 
     return NextResponse.json(

@@ -29,6 +29,9 @@ import { CampusCredLogo } from '@/components/shared/CampusCredLogo';
 import { Navbar } from '@/components/shared/Navbar';
 import { Footer } from '@/components/shared/Footer';
 import { DEGREE_BRANCH_MAP } from '@/lib/constants';
+import { useAppStore } from '@/store';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 const MOCK_INTERNSHIPS = [
  { id: '1', title: 'Frontend Development Intern', description: 'Build responsive web applications using React and Next.js. Work on real products used by millions.', company: { id: '1', companyName: 'Razorpay', logoUrl: '/assets/logos/razorpay.svg', industry: 'FinTech', location: 'Bangalore', isVerified: true }, branches: ['CSE', 'IT', 'ECE'], degrees: ['B.Tech', 'BCA', 'MCA'], duration: '3 months', isPaid: true, stipend: '₹15,000/month', location: 'Bangalore', isRemote: true, deadline: '2025-04-30', status: 'Open', applicantCount: 24 },
@@ -52,6 +55,11 @@ export default function InternshipsPage() {
  const [page, setPage] = useState(1);
  const [internships, setInternships] = useState(MOCK_INTERNSHIPS);
  const [showFilters, setShowFilters] = useState(false);
+ const { token, user } = useAppStore();
+ const router = useRouter();
+ const [live, setLive] = useState(false);
+ const [appliedIds, setAppliedIds] = useState<string[]>([]);
+ const [applyingId, setApplyingId] = useState<string | null>(null);
 
  const allBranches = [...new Set(Object.values(DEGREE_BRANCH_MAP).flat())].sort();
 
@@ -61,10 +69,48 @@ export default function InternshipsPage() {
  .then(data => {
  if (data.internships && data.internships.length > 0) {
  setInternships(data.internships);
+ setLive(true);
  }
  })
  .catch(() => {});
  }, []);
+
+ useEffect(() => {
+ if (!token || user?.role !== 'student') return;
+ fetch('/api/student/internships', { headers: { Authorization: `Bearer ${token}` } })
+ .then(res => (res.ok ? res.json() : null))
+ .then(data => { if (data?.appliedIds) setAppliedIds(data.appliedIds); })
+ .catch(() => {});
+ }, [token, user?.role]);
+
+ const handleApply = async (internshipId: string) => {
+ if (!token) { router.push('/login'); return; }
+ if (user?.role !== 'student') { toast.error('Only students can apply to internships'); return; }
+ if (!live) { toast.info('Applications open on live listings — please check back soon.'); return; }
+ setApplyingId(internshipId);
+ try {
+ const res = await fetch(`/api/internships/${internshipId}/apply`, {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+ body: JSON.stringify({}),
+ });
+ const data = await res.json().catch(() => ({}));
+ if (res.ok) {
+ setAppliedIds(prev => [...prev, internshipId]);
+ setInternships(prev => prev.map(i => i.id === internshipId ? { ...i, applicantCount: (i.applicantCount || 0) + 1 } : i));
+ toast.success('Application submitted! Track it in My Internships.');
+ } else if (res.status === 409) {
+ setAppliedIds(prev => [...prev, internshipId]);
+ toast.info('You have already applied to this internship');
+ } else {
+ toast.error(data.error || 'Failed to submit application');
+ }
+ } catch {
+ toast.error('Failed to submit application. Please try again.');
+ } finally {
+ setApplyingId(null);
+ }
+ };
 
  const filteredInternships = useMemo(() => {
  return internships.filter((intern) => {
@@ -180,10 +226,10 @@ export default function InternshipsPage() {
 
  {/* Internship Grid */}
  {paginated.length > 0 ? (
- <div layout className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+ <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
  <>
  {paginated.map((intern, i) => (
- <div key={intern.id} layout>
+ <div key={intern.id}>
  <Card className="h-full hover:shadow-lg transition-all hover:border-electric/30 group">
  <CardHeader className="pb-3">
  <div className="flex items-center gap-3 mb-2">
@@ -232,6 +278,14 @@ export default function InternshipsPage() {
  <Users className="h-3.5 w-3.5" /> {intern.applicantCount} applied
  </div>
  </div>
+ <Button
+ className="w-full mt-3"
+ size="sm"
+ disabled={appliedIds.includes(intern.id) || applyingId === intern.id}
+ onClick={() => handleApply(intern.id)}
+ >
+ {appliedIds.includes(intern.id) ? 'Applied ✓' : applyingId === intern.id ? 'Applying…' : 'Apply Now'}
+ </Button>
  </CardContent>
  </Card>
  </div>

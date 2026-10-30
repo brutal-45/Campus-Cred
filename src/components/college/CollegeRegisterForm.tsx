@@ -15,7 +15,7 @@ import {
   EyeOff,
   Lock,
   Mail,
-  User,
+  User as UserIcon,
   Building2,
   MapPin,
   Landmark,
@@ -139,7 +139,7 @@ export function CollegeRegisterForm() {
                 <div className="space-y-2">
                   <Label className="text-[13px] font-medium">Admin Name</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
+                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
                     <Input
                       value={form.fullName}
                       onChange={(e) => updateField('fullName', e.target.value)}

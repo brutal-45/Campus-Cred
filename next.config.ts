@@ -5,11 +5,8 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ['*.e2b.app'],
   // Let Vercel package App Router routes as serverless/edge functions itself.
   // `output: 'standalone'` is intended for custom Docker/server deployments.
-  // The legacy UI currently has existing TypeScript errors; don't let those
-  // block deployment, while keeping `npm run lint` as the quality gate.
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  // Type errors must block the build (the codebase type-checks cleanly);
+  // `npm run typecheck` + CI enforce this.
   reactStrictMode: true,
   images: {
     unoptimized: false,
@@ -20,7 +17,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  serverExternalPackages: ["@prisma/client", "puppeteer", "sharp", "bcryptjs", "canvas"],
+  serverExternalPackages: ["@prisma/client", "puppeteer", "sharp", "bcryptjs"],
   // Ensure API routes are properly optimized
   experimental: {
     serverActions: {

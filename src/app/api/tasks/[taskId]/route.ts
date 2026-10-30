@@ -31,7 +31,16 @@ export async function GET(
     }
 
     // Check if the authenticated user has already submitted
-    let userSubmission = null;
+    let userSubmission: {
+      id: string;
+      fileUrl: string | null;
+      externalLink: string | null;
+      description: string | null;
+      status: string;
+      feedback: string | null;
+      submittedAt: Date;
+      reviewedAt: Date | null;
+    } | null = null;
     const authHeader = req.headers.get('authorization');
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];

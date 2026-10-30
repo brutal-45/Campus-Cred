@@ -30,34 +30,87 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Student: get own ambassador data
+    // Student: get own ambassador data (real referral data — this used to be
+    // hardcoded demo numbers identical for every user).
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const payload = verifyAccessToken(authHeader.split(' ')[1]);
+    if (!payload) {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+    }
+
+    const user = await db.user.findUnique({
+      where: { id: payload.userId },
+      select: {
+        id: true, fullName: true, referralCode: true, isAmbassador: true, ambassadorLevel: true,
+        referralsMade: { orderBy: { createdAt: 'desc' }, take: 50 },
+        ambassadorActivities: { orderBy: { createdAt: 'desc' }, take: 50 },
+      },
+    });
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Ensure the student has a stable referral code.
+    let referralCode = user.referralCode;
+    if (!referralCode) {
+      const base = user.fullName.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 6) || 'CAMPUS';
+      for (let attempt = 0; attempt < 5 && !referralCode; attempt++) {
+        const candidate = `${base}${Math.floor(1000 + Math.random() * 9000)}`;
+        const taken = await db.user.findUnique({ where: { referralCode: candidate }, select: { id: true } });
+        if (!taken) referralCode = candidate;
+      }
+      referralCode = referralCode || `CC${user.id.slice(-8).toUpperCase()}`;
+      await db.user.update({ where: { id: user.id }, data: { referralCode } });
+    }
+
+    const referrals = user.referralsMade;
+    const totalReferrals = referrals.length;
+    const activeReferrals = referrals.filter((r) => r.status === 'Registered' || r.status === 'Completed').length;
+    const completedReferrals = referrals.filter((r) => r.status === 'Completed').length;
+    const activityPoints = user.ambassadorActivities.reduce((sum, a) => sum + a.points, 0);
+    const totalPoints = activityPoints + completedReferrals * 20;
+
+    const TIERS = [
+      { name: 'Bronze Ambassador', required: 3 },
+      { name: 'Silver Ambassador', required: 5 },
+      { name: 'Gold Ambassador', required: 10 },
+      { name: 'Platinum Ambassador', required: 25 },
+      { name: 'Legend Ambassador', required: 50 },
+    ];
+    const unlockedTiers = TIERS.filter((t) => totalReferrals >= t.required);
+    const nextTier = TIERS.find((t) => totalReferrals < t.required) || null;
+
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://campuscred.in').replace(/\/+$/, '');
     const stats = {
-      referralCode: 'STUDENT2024XYZ',
-      referralLink: 'https://campuscred.in/r/STUDENT2024XYZ',
-      totalReferrals: 7,
-      activeReferrals: 4,
-      totalPoints: 140,
-      currentBadge: 'Silver Ambassador',
-      nextBadge: 'Gold Ambassador',
-      nextBadgeRequirement: 10,
+      referralCode,
+      referralLink: `${appUrl}/register?ref=${referralCode}`,
+      totalReferrals,
+      activeReferrals,
+      totalPoints,
+      isAmbassador: user.isAmbassador,
+      currentBadge: unlockedTiers.length ? unlockedTiers[unlockedTiers.length - 1].name : 'Campus Ambassador',
+      nextBadge: nextTier?.name || null,
+      nextBadgeRequirement: nextTier?.required || null,
     };
 
-    const activities = [
-      { id: '1', name: 'Amit Kumar', date: '2024-06-08', status: 'rewarded', points: 20 },
-      { id: '2', name: 'Sneha Das', date: '2024-06-07', status: 'active', points: 20 },
-      { id: '3', name: 'Vikram Singh', date: '2024-06-05', status: 'registered', points: 0 },
-      { id: '4', name: 'Priya Nair', date: '2024-06-03', status: 'rewarded', points: 20 },
-      { id: '5', name: 'Karthik R', date: '2024-06-01', status: 'active', points: 20 },
-      { id: '6', name: 'Deepa M', date: '2024-05-28', status: 'rewarded', points: 20 },
-    ];
+    const activities = referrals.map((r) => ({
+      id: r.id,
+      name: r.referredEmail,
+      date: r.createdAt.toISOString().split('T')[0],
+      status: r.status === 'Completed' ? 'rewarded' : r.status === 'Registered' ? 'active' : 'registered',
+      points: r.status === 'Completed' ? 20 : 0,
+    }));
 
-    const rewards = [
-      { id: '1', name: 'Bronze Ambassador', description: 'Refer 3 students', required: 3, current: 3, unlocked: true },
-      { id: '2', name: 'Silver Ambassador', description: 'Refer 5 students', required: 5, current: 5, unlocked: true },
-      { id: '3', name: 'Gold Ambassador', description: 'Refer 10 students', required: 10, current: 7, unlocked: false },
-      { id: '4', name: 'Platinum Ambassador', description: 'Refer 25 students', required: 25, current: 7, unlocked: false },
-      { id: '5', name: 'Legend Ambassador', description: 'Refer 50 students', required: 50, current: 7, unlocked: false },
-    ];
+    const rewards = TIERS.map((t, i) => ({
+      id: String(i + 1),
+      name: t.name,
+      description: `Refer ${t.required} students`,
+      required: t.required,
+      current: Math.min(totalReferrals, t.required),
+      unlocked: totalReferrals >= t.required,
+    }));
 
     return NextResponse.json({ stats, activities, rewards });
   } catch (error) {

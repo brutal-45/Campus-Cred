@@ -266,14 +266,12 @@ export default function TasksPage() {
  {/* Task Grid */}
  {paginatedTasks.length > 0 ? (
  <div
- layout
  className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6"
  >
  <>
  {paginatedTasks.map((task, i) => (
  <div
  key={task.id}
- layout
  >
  <Card className="h-full hover:shadow-lg transition-all hover:border-electric/30 group cursor-pointer">
  <CardHeader className="pb-3">

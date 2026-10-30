@@ -223,5 +223,12 @@ export async function getHallOfFame(branch?: string): Promise<Array<{
     },
   });
 
-  return students;
+  // branch/degree/college are nullable in the DB but non-null in the
+  // leaderboard contract — normalise missing values to ''.
+  return students.map((s) => ({
+    ...s,
+    branch: s.branch ?? '',
+    degree: s.degree ?? '',
+    college: s.college ?? '',
+  }));
 }

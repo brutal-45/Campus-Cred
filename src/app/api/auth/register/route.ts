@@ -23,6 +23,8 @@ export async function POST(req: NextRequest) {
       address,
       state,
       naacRating,
+      referralCode,
+      ref,
     } = body;
 
     // ─── Validation ───
@@ -105,12 +107,52 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Link referral (ambassador program) when a valid code was supplied.
+    // Best-effort: an invalid code must never block registration.
+    const suppliedReferralCode = referralCode || ref;
+    if (suppliedReferralCode && userRole === 'student') {
+      try {
+        const referrer = await db.user.findUnique({
+          where: { referralCode: String(suppliedReferralCode) },
+          select: { id: true },
+        });
+        if (referrer && referrer.id !== user.id) {
+          await db.user.update({
+            where: { id: user.id },
+            data: { referredBy: referrer.id },
+          });
+          await db.referral.create({
+            data: {
+              referrerId: referrer.id,
+              referredEmail: user.email,
+              referredId: user.id,
+              status: 'Registered',
+            },
+          });
+        }
+      } catch (referralError) {
+        console.error('Referral linking failed:', referralError);
+      }
+    }
+
     // Create role-specific records
     if (userRole === 'company' && companyName) {
+      // Company.slug is required + unique — derive it from the company name
+      // (omitting it previously made every company registration fail).
+      const baseSlug = String(companyName)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 60) || 'company';
+      let slug = baseSlug;
+      for (let attempt = 2; await db.company.findUnique({ where: { slug } }); attempt++) {
+        slug = `${baseSlug}-${attempt}`;
+      }
       await db.company.create({
         data: {
           userId: user.id,
           companyName,
+          slug,
           email: email.toLowerCase(),
           industry: industry || null,
           website: website || null,
@@ -155,6 +197,22 @@ export async function POST(req: NextRequest) {
       role: user.role,
     });
 
+    // Create a Session record like login/OAuth do. Without it,
+    // /api/auth/refresh-token rejects the freshly issued refresh token
+    // ("Session not found") and new users lose their session on first reload.
+    const userAgent = req.headers.get('user-agent');
+    const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || null;
+    await db.session.create({
+      data: {
+        userId: user.id,
+        refreshToken,
+        deviceInfo: userAgent?.substring(0, 255) || null,
+        ipAddress: ipAddress?.split(',')[0]?.trim() || null,
+        userAgent: userAgent?.substring(0, 255) || null,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      },
+    });
+
     // Return user data (without password)
     const userData = {
       id: user.id,
@@ -176,7 +234,7 @@ export async function POST(req: NextRequest) {
       campusCredUsername: user.campusCredUsername,
     };
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         message: 'Account created successfully',
         user: userData,
@@ -185,6 +243,17 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 }
     );
+
+    // Set the refresh token as an HttpOnly cookie (parity with login)
+    response.cookies.set('cc_refresh', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
+    });
+
+    return response;
   } catch (error) {
     console.error('Registration error:', error);
     return NextResponse.json(

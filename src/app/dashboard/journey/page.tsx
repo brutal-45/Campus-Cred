@@ -11,6 +11,9 @@ import {
   Calendar, Building2, Zap, Target, GraduationCap, Briefcase,
   ChevronRight, Milestone, Rocket, Award, Sparkles, TrendingUp,
 } from 'lucide-react';
+import Link from 'next/link';
+import { useAppStore } from '@/store';
+import { LEVEL_THRESHOLDS } from '@/lib/constants';
 
 interface MilestoneEntry {
   id: string; title: string; description: string; date: string; type: 'task' | 'certificate' | 'internship' | 'streak' | 'level';
@@ -22,35 +25,137 @@ interface InternshipPhase {
   status: 'completed' | 'active' | 'upcoming'; progress: number; milestones: string[];
 }
 
-const milestones: MilestoneEntry[] = [
-  { id: '1', title: 'First Task Completed', description: 'Completed your first task "Build a Landing Page"', date: '2024-09-15', type: 'task', status: 'completed', points: 50 },
-  { id: '2', title: '7-Day Streak Achievement', description: 'Maintained a 7-day streak of daily task activity', date: '2024-09-22', type: 'streak', status: 'completed', points: 35 },
-  { id: '3', title: 'First Certificate Earned', description: 'Earned "Web Development Professional" certificate', date: '2024-10-01', type: 'certificate', status: 'completed', points: 30 },
-  { id: '4', title: 'Level Up: Achiever ⚡', description: 'Reached Achiever level with 150+ CampusCred Score', date: '2024-10-15', type: 'level', status: 'completed', points: 0 },
-  { id: '5', title: 'Razorpay Internship Started', description: 'Began Frontend Developer internship at Razorpay', date: '2024-11-01', type: 'internship', status: 'completed', company: 'Razorpay' },
-  { id: '6', title: '10 Tasks Completed', description: 'Completed 10 tasks across different categories', date: '2024-11-20', type: 'task', status: 'completed', points: 100 },
-  { id: '7', title: 'Level Up: Expert 🔥', description: 'Reached Expert level with 350+ CampusCred Score', date: '2024-12-01', type: 'level', status: 'in-progress', points: 0 },
-  { id: '8', title: 'Second Certificate', description: 'Earn "Data Science Fundamentals" certificate', date: '', type: 'certificate', status: 'upcoming', points: 30 },
-  { id: '9', title: '30-Day Streak', description: 'Maintain a 30-day activity streak', date: '', type: 'streak', status: 'upcoming', points: 150 },
-  { id: '10', title: 'Level Up: Elite 💎', description: 'Reach Elite level with 600+ CampusCred Score', date: '', type: 'level', status: 'upcoming', points: 0 },
-];
 
-const internshipPhases: InternshipPhase[] = [
-  { id: '1', title: 'Onboarding & Learning', startDate: 'Nov 1', endDate: 'Nov 15', company: 'Razorpay', role: 'Frontend Intern', status: 'completed', progress: 100, milestones: ['Team introduction', 'Codebase walkthrough', 'First PR merged'] },
-  { id: '2', title: 'Feature Development', startDate: 'Nov 16', endDate: 'Dec 15', company: 'Razorpay', role: 'Frontend Intern', status: 'completed', progress: 100, milestones: ['Built payment form component', 'Implemented form validation', 'Unit tests written'] },
-  { id: '3', title: 'Advanced Contributions', startDate: 'Dec 16', endDate: 'Jan 15', company: 'Razorpay', role: 'Frontend Intern', status: 'active', progress: 65, milestones: ['Dashboard optimization', 'Code review participation', 'Mentoring new interns'] },
-  { id: '4', title: 'Final Presentation', startDate: 'Jan 16', endDate: 'Jan 31', company: 'Razorpay', role: 'Frontend Intern', status: 'upcoming', progress: 0, milestones: ['Presentation preparation', 'Demo to stakeholders', 'Exit interview'] },
-];
 
 const typeIcon: Record<string, React.ElementType> = { task: Target, certificate: Award, internship: Briefcase, streak: Zap, level: Trophy };
 const typeColor: Record<string, string> = { task: 'text-electric', certificate: 'text-amber-500', internship: 'text-purple-500', streak: 'text-orange-500', level: 'text-emerald-500' };
 
+interface JourneyApplication {
+  applicationId: string; status: string; appliedAt: string; title: string; company: string; duration?: string | null;
+}
+
 export default function JourneyPage() {
+  const { token, user } = useAppStore();
   const [filter, setFilter] = React.useState<string>('all');
+  const [milestones, setMilestones] = React.useState<MilestoneEntry[]>([]);
+  const [applications, setApplications] = React.useState<JourneyApplication[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    if (!token) { setLoading(false); return; }
+    const headers = { Authorization: `Bearer ${token}` };
+    (async () => {
+      try {
+        const [subsRes, certsRes, appsRes] = await Promise.all([
+          fetch('/api/student/submissions', { headers }).then(r => (r.ok ? r.json() : { submissions: [] })).catch(() => ({ submissions: [] })),
+          fetch('/api/student/certificates', { headers }).then(r => (r.ok ? r.json() : { certificates: [] })).catch(() => ({ certificates: [] })),
+          fetch('/api/student/internships', { headers }).then(r => (r.ok ? r.json() : { internships: [] })).catch(() => ({ internships: [] })),
+        ]);
+
+        const apps: JourneyApplication[] = appsRes.internships || [];
+        setApplications(apps);
+
+        const events: MilestoneEntry[] = [];
+        for (const sub of subsRes.submissions || []) {
+          if (sub.status === 'Approved') {
+            events.push({
+              id: `task-${sub.id}`,
+              title: `Task Approved: ${sub.taskTitle}`,
+              description: `Your submission was approved${sub.taskPoints ? ` and earned ${sub.taskPoints} points` : ''}`,
+              date: (sub.reviewedAt || sub.submittedAt || '').toString(),
+              type: 'task', status: 'completed', points: sub.taskPoints || 0,
+            });
+          } else if (sub.status === 'Pending' || sub.status === 'Under Review') {
+            events.push({
+              id: `task-${sub.id}`,
+              title: `Task Submitted: ${sub.taskTitle}`,
+              description: 'Your submission is awaiting review',
+              date: (sub.submittedAt || '').toString(),
+              type: 'task', status: 'in-progress',
+            });
+          }
+        }
+        for (const cert of certsRes.certificates || []) {
+          events.push({
+            id: `cert-${cert.id}`,
+            title: 'Certificate Earned',
+            description: cert.taskTitle,
+            date: (cert.issuedDate || '').toString(),
+            type: 'certificate', status: 'completed',
+          });
+        }
+        for (const app of apps) {
+          if (app.status === 'Rejected') continue;
+          events.push({
+            id: `app-${app.applicationId}`,
+            title: app.status === 'Hired' ? `Internship Offer: ${app.title}` : `Applied: ${app.title}`,
+            description: app.status === 'Hired' ? 'Congratulations — you were hired!' : `Application status: ${app.status}`,
+            date: (app.appliedAt || '').toString(),
+            type: 'internship', status: app.status === 'Hired' ? 'completed' : 'in-progress', company: app.company,
+          });
+        }
+        if ((user?.streakDays || 0) >= 7) {
+          events.push({
+            id: 'streak-current',
+            title: `${user?.streakDays}-Day Streak`,
+            description: 'Consistency pays off — keep the streak alive!',
+            date: '', type: 'streak', status: 'in-progress',
+          });
+        }
+
+        events.sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'));
+
+        // Upcoming goals derived from the student's actual progress
+        const score = user?.campusCredScore || 0;
+        const nextLevel = LEVEL_THRESHOLDS.find(t => score < t.minScore);
+        if (nextLevel) {
+          events.push({
+            id: 'next-level',
+            title: `Level Up: ${nextLevel.level} ${nextLevel.icon}`,
+            description: `Reach ${nextLevel.minScore}+ CampusCred Score (current: ${score})`,
+            date: '', type: 'level', status: 'upcoming',
+          });
+        }
+        if ((certsRes.certificates || []).length === 0) {
+          events.push({
+            id: 'first-cert',
+            title: 'First Certificate',
+            description: 'Complete and get a task approved to earn your first verified certificate',
+            date: '', type: 'certificate', status: 'upcoming',
+          });
+        }
+
+        setMilestones(events);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [token, user?.campusCredScore, user?.streakDays]);
+
+  const activeApplication =
+    applications.find(a => a.status === 'Hired') ||
+    applications.find(a => a.status === 'Shortlisted') ||
+    applications.find(a => a.status === 'Applied') || null;
+
+  const applicationStages = ['Applied', 'Shortlisted', 'Hired'];
+  const stageIndex = activeApplication ? applicationStages.indexOf(activeApplication.status) : -1;
+  const internshipPhases: InternshipPhase[] = activeApplication ? applicationStages.map((stage, i) => ({
+    id: stage,
+    title: stage === 'Hired' ? 'Offer / Hired' : stage,
+    startDate: '', endDate: '',
+    company: activeApplication.company, role: activeApplication.title,
+    status: i < stageIndex ? 'completed' : i === stageIndex ? 'active' : 'upcoming',
+    progress: i < stageIndex ? 100 : i === stageIndex ? 50 : 0,
+    milestones: [],
+  })) : [];
 
   const filteredMilestones = filter === 'all' ? milestones : milestones.filter(m => m.type === filter);
   const completedCount = milestones.filter(m => m.status === 'completed').length;
-  const totalMilestones = milestones.length;
+  const totalMilestones = Math.max(milestones.length, 1);
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-20"><div className="w-8 h-8 border-2 border-electric/30 border-t-electric rounded-full animate-spin" /></div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -75,11 +180,11 @@ export default function JourneyPage() {
                 <p className="text-sm text-text-secondary">From Starter to Legend — your path so far</p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-navy">{Math.round((completedCount / totalMilestones) * 100)}%</p>
+                <p className="text-2xl font-bold text-navy">{milestones.length ? Math.round((completedCount / totalMilestones) * 100) : 0}%</p>
                 <p className="text-xs text-text-secondary">Complete</p>
               </div>
             </div>
-            <Progress value={(completedCount / totalMilestones) * 100} className="h-3 mb-4" />
+            <Progress value={milestones.length ? (completedCount / totalMilestones) * 100 : 0} className="h-3 mb-4" />
             <div className="flex items-center justify-between text-xs text-text-secondary">
               <span className="flex items-center gap-1"><span>🌱</span> Starter</span>
               <span className="flex items-center gap-1"><span>⚡</span> Achiever</span>
@@ -94,19 +199,20 @@ export default function JourneyPage() {
       {/* Active Internship */}
       <div>
         <h2 className="text-lg font-semibold font-heading mb-4 flex items-center gap-2"><Briefcase className="w-5 h-5 text-purple-500" /> Active Internship</h2>
+        {activeApplication ? (
         <Card className="border-2 border-purple-200">
           <CardContent className="p-6">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                R
+                {(activeApplication.company || 'C')[0]}
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-base font-semibold">Frontend Developer Intern</h3>
-                    <p className="text-sm text-text-secondary">Razorpay • Nov 2024 - Jan 2025</p>
+                    <h3 className="text-base font-semibold">{activeApplication.title}</h3>
+                    <p className="text-sm text-text-secondary">{activeApplication.company}{activeApplication.duration ? ` • ${activeApplication.duration}` : ''}</p>
                   </div>
-                  <Badge className="bg-green-100 text-green-700 border-green-200">Active</Badge>
+                  <Badge className="bg-green-100 text-green-700 border-green-200">{activeApplication.status}</Badge>
                 </div>
                 <div className="mt-4 space-y-3">
                   {internshipPhases.map((phase) => (
@@ -134,6 +240,18 @@ export default function JourneyPage() {
             </div>
           </CardContent>
         </Card>
+        ) : (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Briefcase className="w-12 h-12 text-text-secondary/30 mx-auto mb-3" />
+            <p className="text-sm font-semibold">No active internship yet</p>
+            <p className="text-xs text-text-secondary mt-1">Apply to micro-internships to start your internship journey.</p>
+            <Link href="/internships">
+              <Button className="mt-4 gap-2">Browse Internships <ArrowRight className="w-4 h-4" /></Button>
+            </Link>
+          </CardContent>
+        </Card>
+        )}
       </div>
 
       {/* Filter */}

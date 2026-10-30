@@ -915,7 +915,7 @@ export function CertificateSVG({
 // ─── Preset Certificate Variants ─────────────────────────────────────
 
 /** Quick certificate for each level — used in hero section, previews etc. */
-export const LEVEL_CERTIFICATE_PRESETS: Record<string, Partial<CertificateSVGProps>> = {
+export const LEVEL_CERTIFICATE_PRESETS: Record<string, CertificateSVGProps> = {
   Starter: {
     studentName: 'Rahul Sharma',
     degree: 'B.Tech',

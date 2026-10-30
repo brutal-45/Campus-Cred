@@ -98,7 +98,10 @@ export async function GET(
     });
 
     // Calculate score breakdown
-    let scoreBreakdown = null;
+    let scoreBreakdown: Pick<
+      Awaited<ReturnType<typeof calculateStudentScore>>,
+      'totalScore' | 'level' | 'levelIcon' | 'tasksCompleted' | 'certificatesEarned' | 'streakDays' | 'peerReviewsGiven'
+    > | null = null;
     try {
       const breakdown = await calculateStudentScore(student.id);
       scoreBreakdown = {

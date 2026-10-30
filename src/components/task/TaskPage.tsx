@@ -496,7 +496,7 @@ export function TaskPage() {
                     submissionStatus?.bg || 'bg-yellow-100'
                   }`}
                 >
-                  {React.cloneElement(submissionStatus?.icon || <Hourglass className="w-8 h-8" />, {
+                  {React.cloneElement((submissionStatus?.icon as React.ReactElement | undefined) || <Hourglass className="w-8 h-8" />, {
                     className: `w-8 h-8 ${submissionStatus?.color || 'text-yellow-700'}`,
                   })}
                 </div>

@@ -107,7 +107,7 @@ export function LoginPage() {
         return;
       }
 
-      setUser(data.user as User);
+      setUser(data.user as unknown as User);
       setToken(data.token);
       if (data.refreshToken) setRefreshToken(data.refreshToken);
 
@@ -136,7 +136,7 @@ export function LoginPage() {
         // ─── Demo / Development Flow ───
         const data = await handleDemoOAuth(oauthProvider);
 
-        setUser(data.user as User);
+        setUser(data.user as unknown as User);
         setToken(data.token);
         if (data.refreshToken) setRefreshToken(data.refreshToken);
 
@@ -144,17 +144,17 @@ export function LoginPage() {
           // New OAuth user — navigate to onboarding
           setOauthUser({
             provider: oauthProvider,
-            providerId: (data.user as Record<string, unknown>).googleId ||
-                        (data.user as Record<string, unknown>).githubId ||
-                        (data.user as Record<string, unknown>).linkedinId ||
-                        `${oauthProvider}_demo_12345` as string,
-            email: (data.user as Record<string, unknown>).email as string,
-            name: (data.user as Record<string, unknown>).fullName as string,
-            avatar: ((data.user as Record<string, unknown>).profilePhoto as string) || null,
+            providerId: String((data.user as unknown as Record<string, unknown>).googleId ||
+                        (data.user as unknown as Record<string, unknown>).githubId ||
+                        (data.user as unknown as Record<string, unknown>).linkedinId ||
+                        `${oauthProvider}_demo_12345`),
+            email: (data.user as unknown as Record<string, unknown>).email as string,
+            name: (data.user as unknown as Record<string, unknown>).fullName as string,
+            avatar: ((data.user as unknown as Record<string, unknown>).profilePhoto as string) || null,
           });
           setOauthOnboarding(true);
           router.push('/onboarding');
-          toast.success(`Welcome, ${(data.user as Record<string, unknown>).fullName}! Let's set up your profile.`);
+          toast.success(`Welcome, ${(data.user as unknown as Record<string, unknown>).fullName}! Let's set up your profile.`);
         } else {
           // Existing user — go straight to dashboard
           const roleRoutes: Record<string, string> = {
@@ -163,8 +163,8 @@ export function LoginPage() {
             mentor: '/mentor/dashboard',
             college: '/college/dashboard',
           };
-          router.replace(roleRoutes[(data.user as Record<string, unknown>).role as string] || '/app');
-          toast.success(`Welcome back, ${(data.user as Record<string, unknown>).fullName}!`);
+          router.replace(roleRoutes[(data.user as unknown as Record<string, unknown>).role as string] || '/app');
+          toast.success(`Welcome back, ${(data.user as unknown as Record<string, unknown>).fullName}!`);
         }
       } else {
         // ─── Production Flow (popup) ───
@@ -179,13 +179,13 @@ export function LoginPage() {
           setOauthUser({
             provider: oauthProvider,
             providerId: '',
-            email: (data.user as Record<string, unknown>).email as string,
-            name: (data.user as Record<string, unknown>).fullName as string,
-            avatar: ((data.user as Record<string, unknown>).profilePhoto as string) || null,
+            email: (data.user as unknown as Record<string, unknown>).email as string,
+            name: (data.user as unknown as Record<string, unknown>).fullName as string,
+            avatar: ((data.user as unknown as Record<string, unknown>).profilePhoto as string) || null,
           });
           setOauthOnboarding(true);
           router.push('/onboarding');
-          toast.success(`Welcome, ${(data.user as Record<string, unknown>).fullName}! Let's set up your profile.`);
+          toast.success(`Welcome, ${(data.user as unknown as Record<string, unknown>).fullName}! Let's set up your profile.`);
         } else {
           const roleRoutes: Record<string, string> = {
             admin: '/admin',
@@ -193,8 +193,8 @@ export function LoginPage() {
             mentor: '/mentor/dashboard',
             college: '/college/dashboard',
           };
-          router.replace(roleRoutes[(data.user as Record<string, unknown>).role as string] || '/app');
-          toast.success(`Welcome back, ${(data.user as Record<string, unknown>).fullName}!`);
+          router.replace(roleRoutes[(data.user as unknown as Record<string, unknown>).role as string] || '/app');
+          toast.success(`Welcome back, ${(data.user as unknown as Record<string, unknown>).fullName}!`);
         }
       }
     } catch (err) {

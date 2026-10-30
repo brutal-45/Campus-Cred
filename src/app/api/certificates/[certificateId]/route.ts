@@ -21,8 +21,11 @@ export async function GET(
 
     const { certificateId } = await params;
 
-    const certificate = await db.certificate.findUnique({
-      where: { id: certificateId },
+    // Callers pass the public certificateId (CERT-2026-XXXXXX); accept the
+    // internal DB id too for backward compatibility. (Previously this only
+    // matched `id`, so lookups by public certificate ID always 404'd.)
+    const certificate = await db.certificate.findFirst({
+      where: { OR: [{ certificateId }, { id: certificateId }] },
       include: {
         student: {
           select: {

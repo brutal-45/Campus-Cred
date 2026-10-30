@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyOtp } from '@/lib/otp-service';
 import { cleanPhone } from '@/lib/sms';
+import { db } from '@/lib/db';
 
 /**
  * POST /api/auth/verify-otp
@@ -37,6 +38,14 @@ export async function POST(req: NextRequest) {
         { verified: false, error: result.error },
         { status: 400 }
       );
+    }
+
+    // Persist verification server-side (see verify-email-otp).
+    if (purpose === 'verification') {
+      await db.user.updateMany({
+        where: { OR: [{ phone: digits }, { phone: `+91${digits}` }, { phone }] },
+        data: { isVerified: true },
+      }).catch(() => {});
     }
 
     return NextResponse.json(

@@ -55,7 +55,9 @@ export async function PUT(req: NextRequest) {
     if (bio !== undefined) updateData.bio = bio;
     if (skills !== undefined) updateData.skills = typeof skills === 'string' ? skills : JSON.stringify(skills);
     if (socialLinks !== undefined) updateData.socialLinks = typeof socialLinks === 'string' ? socialLinks : JSON.stringify(socialLinks);
-    if (isVerified !== undefined) updateData.isVerified = isVerified;
+    // NOTE: `isVerified` is intentionally NOT accepted from clients —
+    // verification status is set by the email/phone OTP flows only.
+    // Accepting it here let any user verify their own account.
     if (state !== undefined) updateData.state = state;
 
     const user = await db.user.update({

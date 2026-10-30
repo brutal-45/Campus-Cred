@@ -235,7 +235,7 @@ export default function AboutPage() {
  {values.map((value) => (
  <div key={value.title}>
  <Card className="animate-fade-in p-6 h-full border-border hover:border-electric/30 transition-all hover:shadow-lg group">
- <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${value.gradient} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+ <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${value.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
  <value.icon className="h-6 w-6 text-white" />
  </div>
  <h3 className="text-lg font-heading font-semibold mb-2">{value.title}</h3>

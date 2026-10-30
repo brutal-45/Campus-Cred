@@ -1,87 +1,80 @@
 import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
 
-// GET /api/daily-challenges - Get active daily challenges
+/**
+ * GET /api/daily-challenges
+ * Returns today's challenge tasks (Task.isChallenge) from the database.
+ * Admins create them via POST /api/tasks with isChallenge: true.
+ * (Previously returned a hardcoded list disconnected from real tasks,
+ * so completing a "challenge" could never be submitted or rewarded.)
+ */
 export async function GET() {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
 
-    const challenges = [
-      {
-        id: `dc-${today}-1`,
-        title: 'Build a Responsive Navbar',
-        description: 'Create a fully responsive navigation bar with mobile hamburger menu, dropdown, and smooth animations using React and Tailwind CSS.',
-        category: 'Development',
-        difficulty: 'Easy',
-        points: 50,
-        xpReward: 30,
-        timeLimit: 1800,
-        completedBy: 23,
-        totalParticipants: 156,
-        expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    // Challenges scheduled for today, still before their deadline. If none
+    // are scheduled today, fall back to the most recent active challenges
+    // so the page is useful instead of empty.
+    let rows = await db.task.findMany({
+      where: {
+        isChallenge: true,
+        isActive: true,
+        deadline: { gte: now },
+        challengeDate: { gte: startOfDay, lte: endOfDay },
       },
-      {
-        id: `dc-${today}-2`,
-        title: 'API Error Handling',
-        description: 'Implement comprehensive error handling for a REST API including 404, 500, rate limiting, and proper error response format.',
-        category: 'Development',
-        difficulty: 'Medium',
-        points: 80,
-        xpReward: 50,
-        timeLimit: 3600,
-        completedBy: 8,
-        totalParticipants: 67,
-        expiresAt: new Date(Date.now() + 86400000).toISOString(),
+      include: {
+        _count: { select: { submissions: true } },
+        submissions: { where: { status: 'Approved' }, select: { id: true } },
       },
-      {
-        id: `dc-${today}-3`,
-        title: 'Design a Landing Page',
-        description: 'Create a visually stunning landing page with hero section, features grid, testimonials, and CTA. Focus on typography and spacing.',
-        category: 'Design',
-        difficulty: 'Medium',
-        points: 70,
-        xpReward: 45,
-        timeLimit: 2700,
-        completedBy: 12,
-        totalParticipants: 89,
-        expiresAt: new Date(Date.now() + 86400000).toISOString(),
-      },
-      {
-        id: `dc-${today}-4`,
-        title: 'Write Technical Blog Post',
-        description: 'Write a 500-word technical blog post explaining a complex concept in simple terms. Include code examples and diagrams.',
-        category: 'Writing',
-        difficulty: 'Easy',
-        points: 40,
-        xpReward: 25,
-        timeLimit: 2400,
-        completedBy: 34,
-        totalParticipants: 112,
-        expiresAt: new Date(Date.now() + 86400000).toISOString(),
-      },
-      {
-        id: `dc-${today}-5`,
-        title: 'Database Schema Design',
-        description: 'Design a normalized database schema for an e-commerce platform with users, products, orders, and reviews tables.',
-        category: 'Data',
-        difficulty: 'Hard',
-        points: 100,
-        xpReward: 70,
-        timeLimit: 5400,
-        completedBy: 3,
-        totalParticipants: 28,
-        expiresAt: new Date(Date.now() + 86400000).toISOString(),
-      },
-    ];
+      orderBy: { createdAt: 'asc' },
+      take: 20,
+    });
+
+    if (rows.length === 0) {
+      rows = await db.task.findMany({
+        where: { isChallenge: true, isActive: true, deadline: { gte: now } },
+        include: {
+          _count: { select: { submissions: true } },
+          submissions: { where: { status: 'Approved' }, select: { id: true } },
+        },
+        orderBy: { challengeDate: 'desc' },
+        take: 20,
+      });
+    }
+
+    const challenges = rows.map((t) => {
+      const hours = Number.parseFloat(t.estimatedHours || '');
+      return {
+        id: t.id,
+        title: t.title,
+        description: t.description,
+        category: t.category ? t.category[0].toUpperCase() + t.category.slice(1) : 'General',
+        difficulty: t.difficulty,
+        points: t.points,
+        xpReward: t.points,
+        timeLimit: Number.isFinite(hours) && hours > 0 ? Math.round(hours * 3600) : 3600,
+        completedBy: t.submissions.length,
+        totalParticipants: t._count.submissions,
+        expiresAt: t.deadline.toISOString(),
+        deadline: t.deadline,
+        challengeDate: t.challengeDate,
+      };
+    });
 
     return NextResponse.json({
       challenges,
       meta: {
-        date: today,
+        date: now.toISOString().split('T')[0],
         totalChallenges: challenges.length,
-        refreshAt: new Date(Date.now() + 86400000).toISOString(),
+        refreshAt: endOfDay.toISOString(),
       },
     });
   } catch (error) {
+    console.error('Daily challenges fetch error:', error);
     return NextResponse.json({ error: 'Failed to fetch challenges' }, { status: 500 });
   }
 }

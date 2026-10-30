@@ -165,8 +165,6 @@ export default function HowItWorksPage() {
  {/* Students Flow */}
  <TabsContent value="students">
  <div
- initial="hidden"
- animate="visible"
  className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
  >
  {studentSteps.map((step, i) => (
@@ -205,8 +203,6 @@ export default function HowItWorksPage() {
  {/* Companies Flow */}
  <TabsContent value="companies">
  <div
- initial="hidden"
- animate="visible"
  className="max-w-4xl mx-auto"
  >
  <div className="grid md:grid-cols-2 gap-8 mb-12">
@@ -250,8 +246,6 @@ export default function HowItWorksPage() {
  {/* Colleges Flow */}
  <TabsContent value="colleges">
  <div
- initial="hidden"
- animate="visible"
  className="max-w-4xl mx-auto"
  >
  <div className="grid md:grid-cols-2 gap-8 mb-12">

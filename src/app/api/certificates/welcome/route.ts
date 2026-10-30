@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { verifyAccessToken, generateCertificateId, getLevelFromPoints } from '@/lib/auth';
-import crypto from 'crypto';
+import { generateCertificateHash } from '@/lib/certificate/generate';
 
 export async function POST(req: NextRequest) {
   try {
@@ -75,13 +75,17 @@ export async function POST(req: NextRequest) {
       skills = [];
     }
 
-    // Generate hash for tamper-proofing
-    const secret = process.env.CERT_SECRET || (process.env.NODE_ENV === 'production'
-      ? (() => { throw new Error('CERT_SECRET must be configured in production.'); })()
-      : 'local-development-only-certificate-secret');
-    const issuedDate = new Date().toISOString();
-    const hashData = `${certificateId}-${student.id}-welcome-${issuedDate}-${student.fullName}`;
-    const hash = crypto.createHash('sha256').update(hashData + secret).digest('hex');
+    // Generate hash for tamper-proofing. Must use the same scheme /api/verify
+    // recomputes: taskId segment is '' (welcome certificates have no task),
+    // and the exact issuedDate persisted below.
+    const issuedDate = new Date();
+    const hash = generateCertificateHash(
+      certificateId,
+      student.id,
+      '',
+      issuedDate.toISOString(),
+      student.fullName
+    );
 
     // Create certificate record in database
     const certificate = await db.certificate.create({
@@ -97,6 +101,7 @@ export async function POST(req: NextRequest) {
         state: student.state,
         skills: JSON.stringify(skills),
         level,
+        issuedDate,
         hash,
         isValid: true,
         certType: 'welcome',

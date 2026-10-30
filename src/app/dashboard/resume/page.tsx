@@ -130,7 +130,7 @@ export default function ResumePage() {
                   </Button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div><label className="text-xs font-medium">Institution</label><Input value={edu.institution} onChange={e => setEducation(education.map((e, idx) => idx === i ? { ...e, institution: e.target.value } : e))} placeholder="University name" /></div>
+                  <div><label className="text-xs font-medium">Institution</label><Input value={edu.institution} onChange={e => setEducation(education.map((en, idx) => idx === i ? { ...en, institution: e.target.value } : en))} placeholder="University name" /></div>
                   <div><label className="text-xs font-medium">Degree</label><Input value={edu.degree} onChange={e => setEducation(education.map((en, idx) => idx === i ? { ...en, degree: (e.target as HTMLInputElement).value } : en))} placeholder="B.Tech" /></div>
                   <div><label className="text-xs font-medium">Field of Study</label><Input value={edu.field} onChange={e => setEducation(education.map((en, idx) => idx === i ? { ...en, field: (e.target as HTMLInputElement).value } : en))} placeholder="Computer Science" /></div>
                   <div><label className="text-xs font-medium">GPA</label><Input value={edu.gpa} onChange={e => setEducation(education.map((en, idx) => idx === i ? { ...en, gpa: (e.target as HTMLInputElement).value } : en))} placeholder="8.5/10" /></div>

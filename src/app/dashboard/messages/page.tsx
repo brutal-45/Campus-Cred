@@ -14,40 +14,18 @@ import {
   Users as UsersIcon, Circle, Image, FileText, Mic,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAppStore } from '@/store';
 
 interface Conversation {
   id: string; name: string; avatar: string; lastMessage: string; time: string; unread: number; online: boolean; type: 'direct' | 'group';
 }
 interface Message { id: string; conversationId: string; senderId: string; senderName: string; content: string; time: string; read: boolean; }
 
-const mockConversations: Conversation[] = [
-  { id: '1', name: 'Priya Sharma', avatar: 'PS', lastMessage: 'Great work on the latest submission! Keep it up 🎉', time: '2m ago', unread: 2, online: true, type: 'direct' },
-  { id: '2', name: 'CSE Batch 2025', avatar: 'CSE', lastMessage: 'Anyone working on the API challenge?', time: '15m ago', unread: 5, online: false, type: 'group' },
-  { id: '3', name: 'Rahul Verma', avatar: 'RV', lastMessage: 'Can we schedule a mock interview?', time: '1h ago', unread: 1, online: true, type: 'direct' },
-  { id: '4', name: 'CampusCred Support', avatar: 'CC', lastMessage: 'Your certificate is ready for download', time: '3h ago', unread: 0, online: true, type: 'direct' },
-  { id: '5', name: 'Design Team', avatar: 'DT', lastMessage: 'Check the new Figma updates', time: '5h ago', unread: 0, online: false, type: 'group' },
-  { id: '6', name: 'Arjun Reddy', avatar: 'AR', lastMessage: 'Thanks for the ML resources!', time: '1d ago', unread: 0, online: false, type: 'direct' },
-];
 
-const mockMessages: Record<string, Message[]> = {
-  '1': [
-    { id: '1', conversationId: '1', senderId: 'mentor', senderName: 'Priya Sharma', content: 'Hi! I reviewed your latest submission.', time: '10:00 AM', read: true },
-    { id: '2', conversationId: '1', senderId: 'mentor', senderName: 'Priya Sharma', content: 'The code quality has improved significantly since last time. Your error handling is much more robust now.', time: '10:01 AM', read: true },
-    { id: '3', conversationId: '1', senderId: 'me', senderName: 'You', content: 'Thank you! I spent extra time on the edge cases this time.', time: '10:05 AM', read: true },
-    { id: '4', conversationId: '1', senderId: 'mentor', senderName: 'Priya Sharma', content: 'That shows! One suggestion - consider adding retry logic for the API calls.', time: '10:10 AM', read: true },
-    { id: '5', conversationId: '1', senderId: 'me', senderName: 'You', content: 'Good idea! I\'ll implement exponential backoff. Should I submit again after the changes?', time: '10:15 AM', read: true },
-    { id: '6', conversationId: '1', senderId: 'mentor', senderName: 'Priya Sharma', content: 'Great work on the latest submission! Keep it up 🎉', time: '10:20 AM', read: false },
-  ],
-  '2': [
-    { id: '1', conversationId: '2', senderId: 'other', senderName: 'Amit Kumar', content: 'Has anyone started the React challenge?', time: '9:00 AM', read: true },
-    { id: '2', conversationId: '2', senderId: 'other2', senderName: 'Sneha Das', content: 'I just completed it! The state management part was tricky.', time: '9:15 AM', read: true },
-    { id: '3', conversationId: '2', senderId: 'me', senderName: 'You', content: 'I\'m planning to start tonight. Any tips?', time: '9:30 AM', read: true },
-    { id: '4', conversationId: '2', senderId: 'other', senderName: 'Amit Kumar', content: 'Anyone working on the API challenge?', time: '9:45 AM', read: false },
-  ],
-};
 
 export default function MessagesPage() {
-  const [conversations, setConversations] = React.useState<Conversation[]>(mockConversations);
+  const { token, user } = useAppStore();
+  const [conversations, setConversations] = React.useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = React.useState<Conversation | null>(null);
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [newMessage, setNewMessage] = React.useState('');
@@ -59,34 +37,58 @@ export default function MessagesPage() {
     c.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const mapMessage = React.useCallback((m: Message): Message => ({
+    ...m,
+    senderId: m.senderName === 'You' || m.senderId === user?.id ? 'me' : m.senderId,
+  }), [user?.id]);
+
   React.useEffect(() => {
-    if (selectedConversation) {
-      const msgs = mockMessages[selectedConversation.id] || [];
-      setMessages(msgs);
-      setConversations(prev => prev.map(c => c.id === selectedConversation.id ? { ...c, unread: 0 } : c));
-    }
-  }, [selectedConversation]);
+    if (!token) return;
+    fetch('/api/conversations', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => (r.ok ? r.json() : { conversations: [] }))
+      .then(d => setConversations(d.conversations || []))
+      .catch(() => {});
+  }, [token]);
+
+  React.useEffect(() => {
+    if (!selectedConversation || !token) return;
+    fetch(`/api/conversations?conversationId=${encodeURIComponent(selectedConversation.id)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => (r.ok ? r.json() : { messages: [] }))
+      .then(d => setMessages((d.messages || []).map(mapMessage)))
+      .catch(() => setMessages([]));
+    setConversations(prev => prev.map(c => c.id === selectedConversation.id ? { ...c, unread: 0 } : c));
+  }, [selectedConversation, token, mapMessage]);
 
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation) return;
+    if (!newMessage.trim() || !selectedConversation || !token) return;
+    const content = newMessage.trim();
     setIsSending(true);
-    const msg: Message = {
-      id: Date.now().toString(),
-      conversationId: selectedConversation.id,
-      senderId: 'me',
-      senderName: 'You',
-      content: newMessage.trim(),
-      time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-      read: false,
-    };
-    setMessages(prev => [...prev, msg]);
-    setConversations(prev => prev.map(c => c.id === selectedConversation.id ? { ...c, lastMessage: msg.content, time: 'Just now' } : c));
-    setNewMessage('');
-    setIsSending(false);
+    try {
+      const res = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ conversationId: selectedConversation.id, content }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.message) {
+        toast.error(data.error || 'Failed to send message');
+        return;
+      }
+      const msg = mapMessage(data.message);
+      setMessages(prev => [...prev, msg]);
+      setConversations(prev => prev.map(c => c.id === selectedConversation.id ? { ...c, lastMessage: msg.content, time: 'Just now' } : c));
+      setNewMessage('');
+    } catch {
+      toast.error('Failed to send message. Please try again.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
