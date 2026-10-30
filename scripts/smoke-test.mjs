@@ -176,6 +176,15 @@ async function main() {
   const adminLogin = await api('/api/auth/login', { method: 'POST', body: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD } });
   check('Admin login → 200 + admin role', adminLogin.status === 200 && adminLogin.json?.user?.role === 'admin', `status ${adminLogin.status}`);
   const adminToken = adminLogin.json?.token;
+  if (!adminToken) {
+    // Everything below depends on an admin session — fail fast with a clear
+    // message instead of cascading failures. (Common cause: the server's
+    // ADMIN_EMAIL env does not match the seeded admin's email.)
+    throw new Error(
+      `Admin login failed (status ${adminLogin.status}: ${adminLogin.json?.error || 'no token'}). ` +
+      'Ensure the app server and test agree on ADMIN_EMAIL/ADMIN_PASSWORD and the admin is seeded.'
+    );
+  }
 
   const studentForbidden = await api('/api/admin/students', { token: studentToken });
   check('Student token on admin API → 403', studentForbidden.status === 403, `status ${studentForbidden.status}`);
@@ -260,10 +269,10 @@ async function main() {
     method: 'POST', token: adminToken,
     body: { title: `Smoke Reject Task ${RUN}`, description: 'Will be rejected', degree: 'B.Tech', branch: 'CSE', points: 10, deadline },
   });
-  const submit2 = await api(`/api/student/tasks/${task2.json.task.id}/submit`, {
+  const submit2 = await api(`/api/student/tasks/${task2.json?.task?.id}/submit`, {
     method: 'POST', token: studentToken, body: { externalLink: 'https://example.com/work' },
   });
-  const reject = await api(`/api/admin/submissions/${submit2.json.submission.id}/reject`, {
+  const reject = await api(`/api/admin/submissions/${submit2.json?.submission?.id}/reject`, {
     method: 'PUT', token: adminToken, body: { feedback: 'Needs more detail' },
   });
   check('Admin rejects with feedback → 200', reject.status === 200 && reject.json?.submission?.status === 'Rejected', `status ${reject.status}`);

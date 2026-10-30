@@ -31,6 +31,7 @@ env:
   ADMIN_PASSWORD: Admin@1234
   NEXT_PUBLIC_APP_URL: http://localhost:3000
   EMAIL_PROVIDER: console
+  ALLOW_CONSOLE_EMAIL: 'true'  # let OTP emails go to server log for the smoke test
   SMS_PROVIDER: console
   # Certificate rendering falls back to the built-in SVG renderer in CI.
   PUPPETEER_SKIP_DOWNLOAD: 'true'

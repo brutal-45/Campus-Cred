@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
 
 function getJwtSecret(name: 'JWT_SECRET' | 'JWT_REFRESH_SECRET'): string {
   const secret = process.env[name];
@@ -21,11 +22,15 @@ export async function comparePassword(password: string, hash: string): Promise<b
 }
 
 export function generateAccessToken(payload: { userId: string; email: string; role: string }): string {
-  return jwt.sign(payload, getJwtSecret('JWT_SECRET'), { expiresIn: "15m" });
+  // jwtid (jti) makes every token unique. Without it, two tokens issued for
+  // the same user within the same second are byte-identical (iat has 1s
+  // resolution), which made Session.create fail with a unique-constraint
+  // error on refreshToken when e.g. register → login happened back-to-back.
+  return jwt.sign(payload, getJwtSecret('JWT_SECRET'), { expiresIn: "15m", jwtid: randomUUID() });
 }
 
 export function generateRefreshToken(payload: { userId: string; email: string; role: string }): string {
-  return jwt.sign(payload, getJwtSecret('JWT_REFRESH_SECRET'), { expiresIn: "7d" });
+  return jwt.sign(payload, getJwtSecret('JWT_REFRESH_SECRET'), { expiresIn: "7d", jwtid: randomUUID() });
 }
 
 export function verifyAccessToken(token: string): { userId: string; email: string; role: string } | null {
