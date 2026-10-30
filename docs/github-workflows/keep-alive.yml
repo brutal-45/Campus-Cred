@@ -1,0 +1,38 @@
+name: Keep Render awake (optional)
+
+# Optional keep-alive for a Render free-tier deployment.
+#
+# This replaces the old "python script" workflow, which committed a new
+# timestamp to updates.txt every 5 minutes for 5 hours straight — spamming
+# git history and triggering a full redeploy each time just to keep the
+# instance warm.
+#
+# To enable: set the repository variable RENDER_APP_URL
+# (Settings → Secrets and variables → Actions → Variables), e.g.
+#   https://campuscred.onrender.com
+# If the variable is not set, this workflow does nothing.
+# Not needed on Vercel (serverless doesn't sleep).
+
+on:
+  schedule:
+    - cron: '*/14 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    name: Ping wake-up endpoint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: vars.RENDER_APP_URL != ''
+    steps:
+      - name: Ping /api/wake-up
+        run: |
+          URL="${{ vars.RENDER_APP_URL }}"
+          URL="${URL%/}"
+          echo "Pinging $URL/api/wake-up"
+          curl -fsS --max-time 120 "$URL/api/wake-up"
+          echo
+          echo "App is awake."
